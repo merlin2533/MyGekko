@@ -106,6 +106,23 @@ HEATING_CIRCUIT_SENSORS = (
     _percent(_HC, "valve_opening_level", "Valve Opening"),
 )
 
+_HS = "heatingsystem"
+HEATING_SYSTEM_SENSORS = (
+    _temperature(_HS, "flow_temperature", "Flow Temperature"),
+    _temperature(_HS, "flow_temperature_setpoint", "Flow Temperature Setpoint"),
+)
+
+_MR = "multiroom"
+MULTIROOM_SENSORS = (
+    _percent(_MR, "volume", "Volume"),
+    MyGekkoPropertySensorDescription(
+        key="audio_title",
+        attr="audio_title",
+        name="Title",
+        translation_key="mygekko_multiroom_audio_title",
+    ),
+)
+
 # German names of the sensors above, used to generate translations/de.json
 GERMAN_NAMES = {
     "grid_meter_power": "Netzleistung",
@@ -131,6 +148,8 @@ GERMAN_NAMES = {
     "dew_point": "Taupunkt",
     "pump_working_level": "Pumpenleistung",
     "valve_opening_level": "Ventilöffnung",
+    "volume": "Lautstärke",
+    "audio_title": "Titel",
 }
 
 
@@ -151,6 +170,26 @@ class MyGekkoPropertySensor(MyGekkoEntity, SensorEntity):
         return getattr(self._entity, self.entity_description.attr, None)
 
 
+class MyGekkoTrendSensor(MyGekkoEntity, SensorEntity):
+    """One of the variables of a trend."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, trend, variable):
+        """Initialize the sensor, name and unit come from the MyGekko configuration."""
+        super().__init__(coordinator, trend, "trend", f"_variable{variable.number}")
+        self._trend = trend
+        self._number = variable.number
+        self._attr_name = variable.name
+        self._attr_native_unit_of_measurement = variable.unit or None
+
+    @property
+    def native_value(self):
+        """Return the value of the variable."""
+        variable = self._trend.variable(self._number)
+        return None if variable is None else variable.value
+
+
 def build_extra_sensors(coordinator):
     """Create sensors for energy managers, e-mobility and heating circuits."""
     api = coordinator.api
@@ -158,10 +197,18 @@ def build_extra_sensors(coordinator):
         (api.get_energy_managers(), "energy_manager", ENERGY_MANAGER_SENSORS),
         (api.get_emobils(), "emobil", EMOBIL_SENSORS),
         (api.get_heating_circuits(), "heating_circuit", HEATING_CIRCUIT_SENSORS),
+        (api.get_heating_systems(), "heating_system", HEATING_SYSTEM_SENSORS),
+        (api.get_multirooms(), "multiroom", MULTIROOM_SENSORS),
     )
-    return [
+    sensors = [
         MyGekkoPropertySensor(coordinator, entity, prefix, description)
         for entities, prefix, descriptions in groups
         for entity in entities or []
         for description in descriptions
     ]
+    sensors.extend(
+        MyGekkoTrendSensor(coordinator, trend, variable)
+        for trend in api.get_trends()
+        for variable in trend.variables
+    )
+    return sensors

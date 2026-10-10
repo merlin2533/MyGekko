@@ -14,6 +14,11 @@ from typing import Any
 
 from . import schema
 from .enums import (
+    AlarmSystemSharpState,
+    AlarmSystemZoneAlarmState,
+    AlarmSystemAlarmState,
+    OnOffState,
+    HeatingSystemDeviceModel,
     AccessDoorAccessState,
     AccessDoorAccessType,
     AccessDoorCommand,
@@ -485,6 +490,88 @@ class Load(Device):
     async def set_state(self, state: LoadState) -> None:
         """Switch the load."""
         await self._write(str(int(state)))
+
+
+class HeatingSystem(Device):
+    """Heating system (heat pump, boiler)."""
+
+    SPEC = schema.HEATING_SYSTEMS
+
+    device_model = _enum("deviceModel", HeatingSystemDeviceModel)
+    cooling_mode_state = _enum("coolingModeState", OnOffState)
+    flow_temperature = _float("flowTemperatureValue")
+    flow_temperature_setpoint = _float("flowTemperatureSetPointValue")
+    state = _enum("currentState", OnOffState)
+
+
+class AlarmSystem(Device):
+    """Alarm system. It is read only, the alarm system cannot be armed from here."""
+
+    SPEC = schema.ALARM_SYSTEMS
+
+    alarm_state = _enum("alarmState", AlarmSystemAlarmState)
+    zone1_name = _field("zone1")
+    zone2_name = _field("zone2")
+    zone1_device_status = _enum("zone1DeviceStatus", OnOffState)
+    zone2_device_status = _enum("zone2DeviceStatus", OnOffState)
+    zone1_sharp_state = _enum("zone1SharpState", AlarmSystemSharpState)
+    zone2_sharp_state = _enum("zone2SharpState", AlarmSystemSharpState)
+    zone1_alarm_state = _enum("zone1AlarmState", AlarmSystemZoneAlarmState)
+    zone2_alarm_state = _enum("zone2AlarmState", AlarmSystemZoneAlarmState)
+
+
+class MultiRoom(Device):
+    """Multiroom audio player."""
+
+    SPEC = schema.MULTIROOMS
+
+    player_state = _enum("playerCurrentState", OnOffState)
+    volume = _float("currentVolumeLevel")
+    playing_time = _int("currentPlayingTime")
+    audio_title = _field("currentAudioTitle")
+    playlist_index = _int("currentPlaylistIndex")
+    song_index = _int("currentSongIndex")
+
+
+class SmsEmail(Device):
+    """SMS / e-mail notification switch."""
+
+    SPEC = schema.SMS_EMAILS
+
+    state = _enum("currentState", OnOffState)
+
+
+class TrendVariable:
+    """One of the (up to four) variables of a trend."""
+
+    def __init__(self, number: int, name: str, value: float | None, unit: str | None):
+        """Initialize the variable."""
+        self.number = number
+        self.name = name
+        self.value = value
+        self.unit = unit
+
+
+class Trend(Device):
+    """Trend with up to four logged variables."""
+
+    SPEC = schema.TRENDS
+
+    def variable(self, number: int) -> TrendVariable | None:
+        """Return the variable (1-4), None if it is not in use."""
+        if self._read(f"variable{number}State", _to_enum(OnOffState)) != OnOffState.ON:
+            return None
+        return TrendVariable(
+            number,
+            self._value(f"variable{number}Name") or f"Variable {number}",
+            self._read(f"variable{number}Value", float),
+            self._value(f"variable{number}Unit"),
+        )
+
+    @property
+    def variables(self) -> list[TrendVariable]:
+        """Return the variables that are in use."""
+        return [var for number in range(1, 5) if (var := self.variable(number))]
 
 
 class Meteo(ReadOnlyEntity):

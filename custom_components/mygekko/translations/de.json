@@ -276,6 +276,18 @@
       },
       "mygekko_heatingcircuit_valve_opening_level": {
         "name": "Ventilöffnung"
+      },
+      "mygekko_heatingsystem_flow_temperature": {
+        "name": "Vorlauftemperatur"
+      },
+      "mygekko_heatingsystem_flow_temperature_setpoint": {
+        "name": "Vorlauftemperatur Soll"
+      },
+      "mygekko_multiroom_volume": {
+        "name": "Lautstärke"
+      },
+      "mygekko_multiroom_audio_title": {
+        "name": "Titel"
       }
     },
     "button": {
@@ -284,6 +296,50 @@
       },
       "mygekko_light_group_off": {
         "name": "Auschalten"
+      }
+    },
+    "binary_sensor": {
+      "mygekko_accessdoor_open": {
+        "name": "Offen"
+      },
+      "mygekko_emobil_plugged": {
+        "name": "Eingesteckt"
+      },
+      "mygekko_emobil_charge_request": {
+        "name": "Ladeanforderung"
+      },
+      "mygekko_energymanager_load_shedding": {
+        "name": "Lastabwurf"
+      },
+      "mygekko_energymanager_ems": {
+        "name": "Energiemanagement aktiv"
+      },
+      "mygekko_heatingcircuit_running": {
+        "name": "Läuft"
+      },
+      "mygekko_heatingcircuit_cooling": {
+        "name": "Kühlbetrieb"
+      },
+      "mygekko_heatingsystem_running": {
+        "name": "Läuft"
+      },
+      "mygekko_heatingsystem_cooling": {
+        "name": "Kühlbetrieb"
+      },
+      "mygekko_alarmsystem_alarm": {
+        "name": "Alarm"
+      },
+      "mygekko_alarmsystem_zone_armed": {
+        "name": "Zone {zone} scharf"
+      },
+      "mygekko_alarmsystem_zone_alarm": {
+        "name": "Zone {zone} Alarm"
+      },
+      "mygekko_smsemail_active": {
+        "name": "Aktiv"
+      },
+      "mygekko_multiroom_playing": {
+        "name": "Wiedergabe"
       }
     }
   },

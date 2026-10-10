@@ -19,9 +19,22 @@ SWITCH = "switch"
 SCENE = "scene"
 WATER_HEATER = "water_heater"
 BUTTON = "button"
+BINARY_SENSOR = "binary_sensor"
 SELECT = "select"
 CAMERA = "camera"
-PLATFORMS = [COVER, LIGHT, CLIMATE, SWITCH, SCENE, WATER_HEATER, SENSOR, BUTTON, SELECT, CAMERA]
+PLATFORMS = [
+    BINARY_SENSOR,
+    BUTTON,
+    CAMERA,
+    CLIMATE,
+    COVER,
+    LIGHT,
+    SCENE,
+    SELECT,
+    SENSOR,
+    SWITCH,
+    WATER_HEATER,
+]
 
 
 # Configuration and options
