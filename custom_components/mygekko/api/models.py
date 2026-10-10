@@ -598,6 +598,9 @@ class RoomTemp(Device):
     target_temperature = _float("temperatureSetPointValue")
     humidity = _float("relativeHumidityLevel")
     air_quality = _float("airQualityLevel")
+    valve_opening = _float("valveOpeningLevel")
+    floor_temperature = _float("floorTemperatureValue")
+    cooling_mode_state = _enum("coolingModeState", OnOffState)
 
     @property
     def supported_features(self) -> list[RoomTempsFeature]:

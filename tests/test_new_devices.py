@@ -116,3 +116,19 @@ async def test_zone_alarm_counts_even_when_not_armed(hass):
     assert hass.states.get("binary_sensor.alarm_system_alarm").state == "on"
     assert hass.states.get("binary_sensor.alarm_system_zone_home_alarm").state == "on"
     assert hass.states.get("binary_sensor.alarm_system_zone_home_armed").state == "off"
+
+
+async def test_climate_action_and_floor_temperature(hass, setup_demo):
+    """The room controller reports what it does and the floor temperature."""
+    actions = {
+        state.entity_id: state.attributes.get("hvac_action")
+        for state in hass.states.async_all("climate")
+    }
+    assert "heating" in actions.values()
+    assert "idle" in actions.values()
+    floor = [
+        state
+        for state in hass.states.async_all("sensor")
+        if state.entity_id.endswith("_floor_temperature")
+    ]
+    assert [state.state for state in floor] == ["24.5"]

@@ -21,6 +21,8 @@ class MyGekkoPropertySensorDescription(SensorEntityDescription):
     """Sensor description reading a python property of the MyGekko device."""
 
     attr: str
+    # create the sensor only when the device reports the value at setup
+    only_if_present: bool = False
 
 
 def _sensor(group, attr, name, device_class, state_class, unit, category=None):
@@ -106,6 +108,20 @@ HEATING_CIRCUIT_SENSORS = (
     _percent(_HC, "valve_opening_level", "Valve Opening"),
 )
 
+_RT = "roomtemp"
+ROOM_TEMP_SENSORS = (
+    MyGekkoPropertySensorDescription(
+        key="floor_temperature",
+        attr="floor_temperature",
+        name="Floor Temperature",
+        translation_key="mygekko_roomtemp_floor_temperature",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        only_if_present=True,
+    ),
+)
+
 _HS = "heatingsystem"
 HEATING_SYSTEM_SENSORS = (
     _temperature(_HS, "flow_temperature", "Flow Temperature"),
@@ -150,6 +166,7 @@ GERMAN_NAMES = {
     "valve_opening_level": "Ventilöffnung",
     "volume": "Lautstärke",
     "audio_title": "Titel",
+    "floor_temperature": "Bodentemperatur",
 }
 
 
@@ -197,6 +214,7 @@ def build_extra_sensors(coordinator):
         (api.get_energy_managers(), "energy_manager", ENERGY_MANAGER_SENSORS),
         (api.get_emobils(), "emobil", EMOBIL_SENSORS),
         (api.get_heating_circuits(), "heating_circuit", HEATING_CIRCUIT_SENSORS),
+        (api.get_room_temps(), "room_temps", ROOM_TEMP_SENSORS),
         (api.get_heating_systems(), "heating_system", HEATING_SYSTEM_SENSORS),
         (api.get_multirooms(), "multiroom", MULTIROOM_SENSORS),
     )
@@ -205,6 +223,8 @@ def build_extra_sensors(coordinator):
         for entities, prefix, descriptions in groups
         for entity in entities or []
         for description in descriptions
+        if not description.only_if_present
+        or getattr(entity, description.attr, None) is not None
     ]
     sensors.extend(
         MyGekkoTrendSensor(coordinator, trend, variable)

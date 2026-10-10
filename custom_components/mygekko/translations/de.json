@@ -288,6 +288,9 @@
       },
       "mygekko_multiroom_audio_title": {
         "name": "Titel"
+      },
+      "mygekko_roomtemp_floor_temperature": {
+        "name": "Bodentemperatur"
       }
     },
     "button": {
