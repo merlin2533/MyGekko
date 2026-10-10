@@ -8,13 +8,12 @@ from PyMyGekko.resources.Vents import VentBypassMode
 from PyMyGekko.resources.Vents import VentWorkingLevel
 from PyMyGekko.resources.Vents import VentWorkingMode
 
-from .const import DOMAIN
 from .entity import MyGekkoEntity
 
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up select platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     async_add_devices(
         MyGekkoClockSelect(coordinator, clock)

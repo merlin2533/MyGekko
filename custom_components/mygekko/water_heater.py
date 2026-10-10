@@ -12,7 +12,6 @@ from PyMyGekko.resources.HotWaterSystems import HotWaterSystem
 from PyMyGekko.resources.HotWaterSystems import HotWaterSystemFeature
 from PyMyGekko.resources.HotWaterSystems import HotWaterSystemState
 
-from .const import DOMAIN
 from .entity import MyGekkoEntity
 
 
@@ -21,7 +20,7 @@ _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up light platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     hotwater_systems = coordinator.api.get_hot_water_systems()
     if hotwater_systems is not None:
         async_add_devices(

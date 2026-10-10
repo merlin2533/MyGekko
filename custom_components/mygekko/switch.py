@@ -7,13 +7,12 @@ from PyMyGekko.resources.EMobils import EMobilChargeState
 from PyMyGekko.resources.Loads import Load
 from PyMyGekko.resources.Loads import LoadState
 
-from .const import DOMAIN
 from .entity import MyGekkoEntity
 
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up switch platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     loads = coordinator.api.get_loads()
     if loads is not None:
         async_add_devices(MyGekkoSwitch(coordinator, load) for load in loads)

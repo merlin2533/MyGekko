@@ -11,7 +11,6 @@ from PyMyGekko.resources.RoomTemps import RoomTemp
 from PyMyGekko.resources.RoomTemps import RoomTempsFeature
 from PyMyGekko.resources.RoomTemps import RoomTempsMode
 
-from .const import DOMAIN
 from .entity import MyGekkoEntity
 
 
@@ -20,7 +19,7 @@ _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up cover platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     async_add_devices(
         MyGekkoRoomTempClimate(coordinator, room_temp)

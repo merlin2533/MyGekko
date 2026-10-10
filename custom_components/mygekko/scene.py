@@ -6,12 +6,11 @@ from homeassistant.components.scene import Scene
 from PyMyGekko.resources.Actions import Action
 from PyMyGekko.resources.Actions import ActionState
 
-from .const import DOMAIN
 
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up scene platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     actions = coordinator.api.get_actions()
     globals_network = coordinator.api.get_globals_network()
     if actions is not None and globals_network:

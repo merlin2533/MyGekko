@@ -9,7 +9,6 @@ from PyMyGekko.resources.Lights import Light
 from PyMyGekko.resources.Lights import LightFeature
 from PyMyGekko.resources.Lights import LightState
 
-from .const import DOMAIN
 from .entity import MyGekkoEntity
 
 
@@ -18,7 +17,7 @@ _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up light platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     lights: list[Light] = coordinator.api.get_lights()
     if lights is not None:
         async_add_devices(

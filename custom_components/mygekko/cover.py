@@ -11,13 +11,12 @@ from PyMyGekko.resources.Blinds import Blind
 from PyMyGekko.resources.Blinds import BlindFeature
 from PyMyGekko.resources.Blinds import BlindState
 
-from .const import DOMAIN
 from .entity import MyGekkoEntity
 
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up cover platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     blinds = coordinator.api.get_blinds()
     if blinds is not None:
         async_add_devices(MyGekkoCover(coordinator, blind) for blind in blinds)

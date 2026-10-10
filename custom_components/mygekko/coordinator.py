@@ -42,6 +42,8 @@ WRITE_RETRY_DELAY = 2
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
+MyGekkoConfigEntry = ConfigEntry["MyGekkoDataUpdateCoordinator"]
+
 
 class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""

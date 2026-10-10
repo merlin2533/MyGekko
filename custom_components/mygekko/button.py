@@ -3,13 +3,12 @@ from homeassistant.components.button import ButtonEntity
 from PyMyGekko.resources.Lights import Light
 from PyMyGekko.resources.Lights import LightState
 
-from .const import DOMAIN
 from .entity import MyGekkoEntity
 
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up button platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     lights = coordinator.api.get_lights()
     if lights is not None:
         async_add_devices(

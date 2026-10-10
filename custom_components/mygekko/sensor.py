@@ -24,7 +24,6 @@ from PyMyGekko.resources.Vents import Vent
 from PyMyGekko.resources.Vents import VentFeature
 from PyMyGekko.resources.Meteo import Meteo
 
-from .const import DOMAIN
 from .sensor_extra import build_extra_sensors
 
 SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
@@ -179,7 +178,7 @@ SENSOR_UNIT_MAPPING = {
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up sensor platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     energy_costs: list[EnergyCost] = coordinator.api.get_energy_costs()
     for energy_cost in energy_costs:
         if energy_cost.sensor_data and "values" in energy_cost.sensor_data:

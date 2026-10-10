@@ -10,7 +10,6 @@ from PyMyGekko.resources.Cams import CamFeature
 from PyMyGekko.resources.DoorInterComs import DoorInterCom
 from PyMyGekko.resources.DoorInterComs import DoorInterComFeature
 
-from .const import DOMAIN
 from .entity import MyGekkoEntity
 
 
@@ -19,7 +18,7 @@ _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up Camera platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     cams = coordinator.api.get_cams()
     if cams is not None:
         async_add_devices(MyGekkoCam(coordinator, cam) for cam in cams)

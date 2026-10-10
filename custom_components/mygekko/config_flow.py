@@ -62,7 +62,6 @@ class MyGekkoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for mygekko."""
 
     VERSION = 3
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
     def __init__(self):
         """Initialize."""
