@@ -83,7 +83,7 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 The integration supports the MyGekko Plus query API (cloud, needs a MyGekko Plus subscription), the local API of your MyGekko and a demo mode with static data.
 
 - **Options** (integration → Configure): update interval (default 30 s, minimum 10 s) and "use the MyGekko pages as areas".
-- **Local connection:** the integration tries https first and falls back to http (older firmware or a MyGekko without https). The scheme that works is stored with the entry.
+- **Local connection:** the integration tries https first and falls back to http (older firmware or a MyGekko without https). Only a refused connection or a failed SSL handshake triggers the fallback (not a timeout). With http the login travels unencrypted over your local network (a warning is logged), so use it only in a trusted network. The scheme is detected again when you reconfigure the entry.
 - **Reconfigure** (integration → three dots): change credentials or the IP address without removing the integration.
 - If MyGekko rejects the credentials Home Assistant asks for them again (re-authentication).
 - **Troubleshooting:** download the diagnostics of the integration (credentials, Gekko ID and IP address are redacted) and attach them to an issue. Rate limit warnings (`skipping this update`) mean that MyGekko limits the requests: increase the update interval and avoid automations that switch devices in a fast loop.

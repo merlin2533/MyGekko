@@ -375,5 +375,10 @@
       "title": "MyGekko limits the requests",
       "description": "MyGekko ({name}) rejects requests because too many were sent (HTTP 429). The values may be outdated. Increase the update interval in the options of the integration and avoid automations that switch devices in a fast loop."
     }
+  },
+  "exceptions": {
+    "alarm_read_only": {
+      "message": "The alarm system is read only, it cannot be disarmed from Home Assistant."
+    }
   }
 }

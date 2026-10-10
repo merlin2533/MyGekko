@@ -375,5 +375,10 @@
       "title": "MyGekko limite les requêtes",
       "description": "MyGekko ({name}) refuse les requêtes car trop de requêtes ont été envoyées (HTTP 429). Les valeurs peuvent être obsolètes. Augmentez l'intervalle de mise à jour dans les options de l'intégration et évitez les automatisations qui commutent des appareils en boucle rapide."
     }
+  },
+  "exceptions": {
+    "alarm_read_only": {
+      "message": "Le système d'alarme est en lecture seule, il ne peut pas être désactivé depuis Home Assistant."
+    }
   }
 }

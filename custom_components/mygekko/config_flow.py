@@ -4,7 +4,10 @@ import logging
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
+from aiohttp import ClientConnectorError
 from aiohttp import ClientError
+from aiohttp import ClientSSLError
+from aiohttp import ServerDisconnectedError
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
@@ -323,12 +326,23 @@ class MyGekkoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 async with asyncio.timeout(15):
                     await client.try_connect()
+                if scheme == "http":
+                    _LOGGER.warning(
+                        "MyGekko %s does not answer on https, using http: the login is sent "
+                        "unencrypted over the local network",
+                        ip_address,
+                    )
                 self._local_scheme = scheme
                 return True
-            except (ClientError, TimeoutError):
-                _LOGGER.warning(
+            except (ClientConnectorError, ClientSSLError, ServerDisconnectedError):
+                # https is not offered (handshake failure, port closed): try http
+                _LOGGER.debug(
                     "Connection to MyGekko with %s failed", scheme, exc_info=True
                 )
+            except (ClientError, TimeoutError):
+                # a slow or unreachable MyGekko is no reason to give up encryption
+                _LOGGER.exception("Connection to MyGekko failed")
+                return False
             except MyGekkoError:
                 # the MyGekko answered, so the scheme is right but the login is not
                 _LOGGER.exception("MyGekkoError")

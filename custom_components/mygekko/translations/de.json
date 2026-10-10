@@ -376,5 +376,10 @@
       "title": "MyGekko begrenzt die Anfragen",
       "description": "MyGekko ({name}) lehnt Anfragen ab, weil zu viele gesendet wurden (HTTP 429). Die Werte sind möglicherweise veraltet. Erhöhe das Aktualisierungsintervall in den Optionen der Integration und vermeide Automationen, die Geräte in einer schnellen Schleife schalten."
     }
+  },
+  "exceptions": {
+    "alarm_read_only": {
+      "message": "Die Alarmanlage ist nur lesbar und kann nicht über Home Assistant deaktiviert werden."
+    }
   }
 }
