@@ -30,8 +30,7 @@ verschluckte Fehler, Refresh-Sturm nach Schaltbefehlen, Reload-Listener-Leak, Ka
 - Uhren (Zeitschaltuhren): Select (Aus/Ein/Bei Übereinstimmung).
 
 ## Nicht umgesetzt / Grenzen
-- Lib-seitig (Repo StephanU/PyMyGekko, kein Schreibzugriff): HTTP-Timeouts, JSON-Fehler
-  nicht verschlucken, KeyError bei fehlenden Feldern. Die Integration fängt das ab.
+- Lib-Fixes upstream (StephanU/PyMyGekko) nicht möglich -> Lib wurde stattdessen vendored (siehe unten).
 - Zutrittstüren (Türöffner): bewusst nicht als Entity, sicherheitsrelevant.
 - Tests: Template-Tests sind veraltet und lokal nicht lauffähig (HA 2026.8 braucht Python 3.14).
 
