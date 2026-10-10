@@ -70,6 +70,9 @@ if TYPE_CHECKING:
 _ZIMMERMANN = (VentDeviceModel.ZIMMERMANN_V1, VentDeviceModel.ZIMMERMANN_V2)
 
 
+ELEMENT_STATUS = {0: "ok", 1: "manual_off", 2: "manual_on", 3: "locked", 4: "alarm"}
+
+
 def _to_enum(enum: type[Enum]) -> Callable[[str], Any]:
     return lambda raw: enum(int(float(raw)))
 
@@ -152,6 +155,24 @@ class Device(ReadOnlyEntity):
 
     async def _write(self, value: str) -> None:
         await self._client.write(self.resource_path, value)
+
+    @property
+    def model(self) -> str:
+        """Return the device type, e.g. "Light"."""
+        return schema.LABELS.get(self.SPEC.kind, self.SPEC.kind)
+
+    @property
+    def page(self) -> str | None:
+        """Return the page (room, floor) of this device in the MyGekko app."""
+        page = self._value("page")
+        return None if page in (None, "...") else page
+
+    @property
+    def element_status(self) -> str | None:
+        """Return the status of the element: ok, manual_off, manual_on, locked or alarm."""
+        return self._read(
+            "elementInfo", lambda raw: ELEMENT_STATUS[int(float(raw))]
+        )
 
 
 class AccessDoor(Device):

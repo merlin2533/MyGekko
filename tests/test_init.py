@@ -2,6 +2,7 @@
 from unittest.mock import patch
 
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import EntityCategory
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -55,7 +56,7 @@ async def test_setup_retries_when_gekko_is_not_reachable(hass):
         data={"connection_type": CONF_CONNECTION_MY_GEKKO_CLOUD, **CLOUD_INPUT},
     )
     entry.add_to_hass(hass)
-    for error in (MyGekkoTooManyRequests("429"), MyGekkoForbidden("403"), TimeoutError()):
+    for error in (MyGekkoTooManyRequests("429"), TimeoutError()):
         with patch(
             "custom_components.mygekko.api.MyGekkoClient.read_data", side_effect=error
         ):
@@ -77,3 +78,53 @@ async def test_migration_from_version_1(hass):
     assert entry.version == 3
     assert entry.data["api_key"] == "k"
     assert "apikey" not in entry.data
+
+
+async def test_rejected_credentials_start_reauth(hass):
+    """A rejected login asks the user for new credentials."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        version=3,
+        data={"connection_type": CONF_CONNECTION_MY_GEKKO_CLOUD, **CLOUD_INPUT},
+    )
+    entry.add_to_hass(hass)
+    with patch(
+        "custom_components.mygekko.api.MyGekkoClient.read_data",
+        side_effect=MyGekkoForbidden("403"),
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.SETUP_ERROR
+    flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    assert [flow["context"]["source"] for flow in flows] == ["reauth"]
+
+
+async def test_controller_device(hass, setup_demo):
+    """The controller is a device with model and version, devices connect to it."""
+    registry = dr.async_get(hass)
+    controller = registry.async_get_device_by_identifier(
+        (DOMAIN, "mygekko_controller_myGEKKO Demo"), setup_demo.entry_id
+    )
+    assert controller is not None
+    assert controller.sw_version
+    assert controller.model
+
+    light = registry.async_get_device_by_identifier(
+        (DOMAIN, "lightsitem0"), setup_demo.entry_id
+    )
+    assert light is not None
+    assert light.via_device_id == controller.id
+    assert light.model == "Light"
+
+
+async def test_noisy_sensors_are_disabled_by_default(hass, setup_demo):
+    """The energy time frame sensors are off by default, power limits are diagnostic."""
+    registry = er.async_get(hass)
+    bucket = registry.async_get(
+        "sensor.main_electricity_meter_total_energy_today_from_00_00_to_06_00"
+    )
+    assert bucket.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+    nominal = registry.async_get("sensor.main_electricity_meter_nominal_power")
+    assert nominal.entity_category is EntityCategory.DIAGNOSTIC
+    # the main values stay enabled
+    assert registry.async_get("sensor.main_electricity_meter_total_energy").disabled_by is None

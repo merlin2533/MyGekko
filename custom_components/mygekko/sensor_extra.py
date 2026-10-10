@@ -8,6 +8,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.sensor import SensorStateClass
 from homeassistant.const import PERCENTAGE
+from homeassistant.const import EntityCategory
 from homeassistant.const import UnitOfEnergy
 from homeassistant.const import UnitOfPower
 from homeassistant.const import UnitOfTemperature
@@ -22,81 +23,115 @@ class MyGekkoPropertySensorDescription(SensorEntityDescription):
     attr: str
 
 
-def _power(key, attr, name, unit=UnitOfPower.WATT):
+def _sensor(group, attr, name, device_class, state_class, unit, category=None):
     return MyGekkoPropertySensorDescription(
-        key=key,
+        key=attr,
         attr=attr,
         name=name,
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=unit,
-    )
-
-
-def _energy(key, attr, name, unit=UnitOfEnergy.WATT_HOUR):
-    return MyGekkoPropertySensorDescription(
-        key=key,
-        attr=attr,
-        name=name,
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-        native_unit_of_measurement=unit,
-    )
-
-
-def _temperature(key, attr, name):
-    return MyGekkoPropertySensorDescription(
-        key=key,
-        attr=attr,
-        name=name,
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-    )
-
-
-def _percent(key, attr, name, device_class=None):
-    return MyGekkoPropertySensorDescription(
-        key=key,
-        attr=attr,
-        name=name,
+        translation_key=f"mygekko_{group}_{attr}",
         device_class=device_class,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
+        state_class=state_class,
+        native_unit_of_measurement=unit,
+        entity_category=category,
     )
 
 
+def _power(group, attr, name, unit=UnitOfPower.WATT, category=None):
+    return _sensor(
+        group, attr, name, SensorDeviceClass.POWER, SensorStateClass.MEASUREMENT, unit, category
+    )
+
+
+def _energy(group, attr, name, unit=UnitOfEnergy.WATT_HOUR):
+    return _sensor(
+        group, attr, name, SensorDeviceClass.ENERGY, SensorStateClass.TOTAL_INCREASING, unit
+    )
+
+
+def _temperature(group, attr, name):
+    return _sensor(
+        group,
+        attr,
+        name,
+        SensorDeviceClass.TEMPERATURE,
+        SensorStateClass.MEASUREMENT,
+        UnitOfTemperature.CELSIUS,
+    )
+
+
+def _percent(group, attr, name, device_class=None):
+    return _sensor(
+        group, attr, name, device_class, SensorStateClass.MEASUREMENT, PERCENTAGE
+    )
+
+
+_EM = "energymanager"
 ENERGY_MANAGER_SENSORS = (
-    _power("grid_meter_power", "grid_meter_power", "Grid Power"),
-    _power("power_exported_to_grid", "power_exported_to_grid", "Power Exported To Grid"),
-    _power("power_from_solar_panels", "power_from_solar_panels", "Solar Power"),
-    _power("power_from_battery", "power_from_battery", "Battery Power"),
-    _power("power_charging_battery", "power_charging_battery", "Battery Charging Power"),
-    _power("home_power_consumption", "home_power_consumption", "Home Power Consumption"),
-    _energy("daily_energy_imported_from_grid", "daily_energy_imported_from_grid", "Daily Energy Imported From Grid"),
-    _energy("daily_energy_exported_to_grid", "daily_energy_exported_to_grid", "Daily Energy Exported To Grid"),
-    _energy("daily_energy_from_solar_panels", "daily_energy_from_solar_panels", "Daily Solar Energy"),
-    _energy("daily_energy_from_battery", "daily_energy_from_battery", "Daily Energy From Battery"),
-    _energy("daily_energy_charging_battery", "daily_energy_charging_battery", "Daily Energy Charging Battery"),
-    _energy("daily_home_energy_consumption", "daily_home_energy_consumption", "Daily Home Energy Consumption"),
-    _percent("battery_soc", "battery_soc", "Battery Charge", SensorDeviceClass.BATTERY),
+    _power(_EM, "grid_meter_power", "Grid Power"),
+    _power(_EM, "power_exported_to_grid", "Power Exported To Grid"),
+    _power(_EM, "power_from_solar_panels", "Solar Power"),
+    _power(_EM, "power_from_battery", "Battery Power"),
+    _power(_EM, "power_charging_battery", "Battery Charging Power"),
+    _power(_EM, "home_power_consumption", "Home Power Consumption"),
+    _energy(_EM, "daily_energy_imported_from_grid", "Daily Energy Imported From Grid"),
+    _energy(_EM, "daily_energy_exported_to_grid", "Daily Energy Exported To Grid"),
+    _energy(_EM, "daily_energy_from_solar_panels", "Daily Solar Energy"),
+    _energy(_EM, "daily_energy_from_battery", "Daily Energy From Battery"),
+    _energy(_EM, "daily_energy_charging_battery", "Daily Energy Charging Battery"),
+    _energy(_EM, "daily_home_energy_consumption", "Daily Home Energy Consumption"),
+    _percent(_EM, "battery_soc", "Battery Charge", SensorDeviceClass.BATTERY),
 )
 
+_EV = "emobil"
 EMOBIL_SENSORS = (
-    _power("current_charging_power", "current_charging_power", "Charging Power", UnitOfPower.KILO_WATT),
-    _power("maximum_charging_power", "maximum_charging_power", "Maximum Charging Power", UnitOfPower.KILO_WATT),
-    _power("charging_power_setpoint", "charging_power_setpoint", "Charging Power Setpoint", UnitOfPower.KILO_WATT),
-    _energy("current_charging_energy", "current_charging_energy", "Charged Energy", UnitOfEnergy.KILO_WATT_HOUR),
+    _power(_EV, "current_charging_power", "Charging Power", UnitOfPower.KILO_WATT),
+    _power(
+        _EV, "maximum_charging_power", "Maximum Charging Power", UnitOfPower.KILO_WATT,
+        EntityCategory.DIAGNOSTIC,
+    ),
+    _power(
+        _EV, "charging_power_setpoint", "Charging Power Setpoint", UnitOfPower.KILO_WATT,
+        EntityCategory.DIAGNOSTIC,
+    ),
+    _energy(_EV, "current_charging_energy", "Charged Energy", UnitOfEnergy.KILO_WATT_HOUR),
 )
 
+_HC = "heatingcircuit"
 HEATING_CIRCUIT_SENSORS = (
-    _temperature("flow_temperature", "flow_temperature", "Flow Temperature"),
-    _temperature("return_flow_temperature", "return_flow_temperature", "Return Flow Temperature"),
-    _temperature("flow_temperature_setpoint", "flow_temperature_setpoint", "Flow Temperature Setpoint"),
-    _temperature("dew_point", "dew_point", "Dew Point"),
-    _percent("pump_working_level", "pump_working_level", "Pump Level"),
-    _percent("valve_opening_level", "valve_opening_level", "Valve Opening"),
+    _temperature(_HC, "flow_temperature", "Flow Temperature"),
+    _temperature(_HC, "return_flow_temperature", "Return Flow Temperature"),
+    _temperature(_HC, "flow_temperature_setpoint", "Flow Temperature Setpoint"),
+    _temperature(_HC, "dew_point", "Dew Point"),
+    _percent(_HC, "pump_working_level", "Pump Level"),
+    _percent(_HC, "valve_opening_level", "Valve Opening"),
 )
+
+# German names of the sensors above, used to generate translations/de.json
+GERMAN_NAMES = {
+    "grid_meter_power": "Netzleistung",
+    "power_exported_to_grid": "Einspeisung ins Netz",
+    "power_from_solar_panels": "Solarleistung",
+    "power_from_battery": "Batterieleistung",
+    "power_charging_battery": "Batterie-Ladeleistung",
+    "home_power_consumption": "Hausverbrauch",
+    "daily_energy_imported_from_grid": "Netzbezug heute",
+    "daily_energy_exported_to_grid": "Einspeisung heute",
+    "daily_energy_from_solar_panels": "Solarertrag heute",
+    "daily_energy_from_battery": "Energie aus Batterie heute",
+    "daily_energy_charging_battery": "Batterie-Ladeenergie heute",
+    "daily_home_energy_consumption": "Hausverbrauch heute",
+    "battery_soc": "Batterieladung",
+    "current_charging_power": "Ladeleistung",
+    "maximum_charging_power": "Maximale Ladeleistung",
+    "charging_power_setpoint": "Ladeleistung Sollwert",
+    "current_charging_energy": "Geladene Energie",
+    "flow_temperature": "Vorlauftemperatur",
+    "return_flow_temperature": "Rücklauftemperatur",
+    "flow_temperature_setpoint": "Vorlauftemperatur Soll",
+    "dew_point": "Taupunkt",
+    "pump_working_level": "Pumpenleistung",
+    "valve_opening_level": "Ventilöffnung",
+}
 
 
 class MyGekkoPropertySensor(MyGekkoEntity, SensorEntity):

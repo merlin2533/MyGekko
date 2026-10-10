@@ -1,11 +1,15 @@
-"""MyGekkoEntity class."""
+"""Base classes of the MyGekko entities."""
+from __future__ import annotations
+
 import logging
+from typing import Any
 
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .api import ReadOnlyEntity
 
+from .api import ReadOnlyEntity
+from .const import CONF_USE_PAGES_AS_AREAS
 from .const import DOMAIN
 from .const import MANUFACTURER
 from .const import NAME
@@ -13,29 +17,32 @@ from .const import NAME
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
-class MyGekkoEntity(CoordinatorEntity):
-    """Base Class for MyGekko entities."""
+def controller_device_id(globals_network: dict[str, str] | None) -> str | None:
+    """Return the id of the controller device, None if its name is unknown."""
+    name = (globals_network or {}).get("gekkoname")
+    return f"mygekko_controller_{name}" if name else None
+
+
+def controller_device_info(
+    globals_network: dict[str, str], configuration_url: str | None = None
+) -> DeviceInfo:
+    """Return the device of the MyGekko controller itself."""
+    hardware = globals_network.get("hardware")
+    return DeviceInfo(
+        identifiers={(DOMAIN, controller_device_id(globals_network))},
+        name=globals_network["gekkoname"],
+        manufacturer=MANUFACTURER,
+        model=hardware if hardware and hardware != "legacy" else "myGEKKO",
+        sw_version=globals_network.get("version"),
+        hw_version=hardware,
+        configuration_url=configuration_url,
+    )
+
+
+class _MyGekkoBaseEntity(CoordinatorEntity):
+    """Common behavior of all MyGekko entities."""
 
     _attr_has_entity_name = True
-
-    def __init__(
-        self, coordinator, entity: ReadOnlyEntity, entity_prefix: str, entity_suffix: str = ""
-    ):
-        """Initialize a MyGekko entity."""
-        super().__init__(coordinator)
-
-        device_id = f"{entity_prefix}{entity.entity_id}"
-        device_name = entity.name
-
-        self._attr_unique_id = f"{device_id}{entity_suffix}"
-
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, device_id)},
-            manufacturer=NAME,
-            name=device_name,
-        )
-
-        _LOGGER.debug("Added MyGekko entity id='%s'", self.unique_id)
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -46,10 +53,50 @@ class MyGekkoEntity(CoordinatorEntity):
             _LOGGER.exception("State update failed for %s", self.entity_id)
 
 
-class MyGekkoControllerEntity(CoordinatorEntity):
-    """Base Class for MyGekko controller entities."""
+class MyGekkoEntity(_MyGekkoBaseEntity):
+    """Base class for the entities of a MyGekko device."""
 
-    _attr_has_entity_name = True
+    def __init__(
+        self,
+        coordinator,
+        entity: ReadOnlyEntity,
+        entity_prefix: str,
+        entity_suffix: str = "",
+    ):
+        """Initialize a MyGekko entity."""
+        super().__init__(coordinator)
+        self._device = entity
+
+        device_id = f"{entity_prefix}{entity.entity_id}"
+        self._attr_unique_id = f"{device_id}{entity_suffix}"
+
+        info = DeviceInfo(
+            identifiers={(DOMAIN, device_id)},
+            manufacturer=NAME,
+            name=entity.name,
+            model=getattr(entity, "model", None),
+        )
+        controller = controller_device_id(coordinator.api.get_globals_network())
+        if controller:
+            info["via_device"] = (DOMAIN, controller)
+        page = getattr(entity, "page", None)
+        if page and coordinator.config_entry.options.get(CONF_USE_PAGES_AS_AREAS):
+            info["suggested_area"] = page
+        self._attr_device_info = info
+
+        _LOGGER.debug("Added MyGekko entity id='%s'", self.unique_id)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Report when the element is locked, set to manual operation or in alarm."""
+        status = getattr(self._device, "element_status", None)
+        if status in (None, "ok"):
+            return None
+        return {"element_status": status}
+
+
+class MyGekkoControllerEntity(_MyGekkoBaseEntity):
+    """Base class for the entities of the MyGekko controller."""
 
     def __init__(
         self, coordinator, entity: ReadOnlyEntity, globals_network, entity_prefix: str
@@ -57,31 +104,13 @@ class MyGekkoControllerEntity(CoordinatorEntity):
         """Initialize a MyGekko controller entity."""
         super().__init__(coordinator)
 
-        device_id = f"mygekko_controller_{globals_network['gekkoname']}"
-        device_name = globals_network["gekkoname"]
-
+        device_id = controller_device_id(globals_network)
         self._attr_unique_id = f"{device_id}{entity_prefix}{entity.entity_id}"
         self._attr_name = f"{entity.name}"
-
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, device_id)},
-            name=device_name,
-            manufacturer=MANUFACTURER,
-            sw_version=globals_network.get("version", "unknown"),
-            hw_version=globals_network.get("hardware", "unknown"),
-            model=globals_network.get("hardware", "unknown"),
-        )
+        self._attr_device_info = controller_device_info(globals_network)
 
         _LOGGER.debug(
             "Added MyGekko controller entity: id='%s' name='%s'",
             self.unique_id,
             self.name,
         )
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data; one failing entity must not stop the others."""
-        try:
-            self.async_write_ha_state()
-        except Exception:  # noqa: BLE001
-            _LOGGER.exception("State update failed for %s", self.entity_id)

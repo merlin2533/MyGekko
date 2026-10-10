@@ -243,6 +243,26 @@ VENTS = ResourceSpec(
     ),
 )
 
+# Human readable device type, used as model of the devices in Home Assistant.
+LABELS: dict[str, str] = {
+    "accessdoors": "Access door",
+    "actions": "Action",
+    "alarms_logics": "Alarm / logic",
+    "blinds": "Blind",
+    "cams": "Camera",
+    "clocks": "Clock",
+    "door_intercom": "Door intercom",
+    "emobils": "E-mobility",
+    "energycosts": "Energy meter",
+    "energymanager": "Energy manager",
+    "heatingcircuits": "Heating circuit",
+    "hotwater_systems": "Hot water system",
+    "lights": "Light",
+    "loads": "Load",
+    "roomtemps": "Room temperature",
+    "vents": "Ventilation",
+}
+
 # All device resource types in the order they are exposed.
 SPECS: tuple[ResourceSpec, ...] = (
     ACCESS_DOORS,
