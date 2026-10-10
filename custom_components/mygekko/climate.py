@@ -7,9 +7,9 @@ from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate import ClimateEntityFeature
 from homeassistant.components.climate import HVACMode
 from homeassistant.const import UnitOfTemperature
-from PyMyGekko.resources.RoomTemps import RoomTemp
-from PyMyGekko.resources.RoomTemps import RoomTempsFeature
-from PyMyGekko.resources.RoomTemps import RoomTempsMode
+from .pymygekko.resources.RoomTemps import RoomTemp
+from .pymygekko.resources.RoomTemps import RoomTempsFeature
+from .pymygekko.resources.RoomTemps import RoomTempsMode
 
 from .entity import MyGekkoEntity
 

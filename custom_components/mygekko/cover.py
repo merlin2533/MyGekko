@@ -7,9 +7,9 @@ from homeassistant.components.cover import ATTR_TILT_POSITION
 from homeassistant.components.cover import CoverDeviceClass
 from homeassistant.components.cover import CoverEntity
 from homeassistant.components.cover import CoverEntityFeature
-from PyMyGekko.resources.Blinds import Blind
-from PyMyGekko.resources.Blinds import BlindFeature
-from PyMyGekko.resources.Blinds import BlindState
+from .pymygekko.resources.Blinds import Blind
+from .pymygekko.resources.Blinds import BlindFeature
+from .pymygekko.resources.Blinds import BlindState
 
 from .entity import MyGekkoEntity
 

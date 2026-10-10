@@ -3,25 +3,25 @@ import asyncio
 import logging
 from datetime import timedelta
 
+from aiohttp import ClientError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY
 from homeassistant.const import CONF_IP_ADDRESS
 from homeassistant.const import CONF_PASSWORD
 from homeassistant.const import CONF_USERNAME
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
-from PyMyGekko import MyGekkoDemoModeClient
-from PyMyGekko import MyGekkoLocalApiClient
-from PyMyGekko import MyGekkoQueryApiClient
-from PyMyGekko.data_provider import MyGekkoError
-from PyMyGekko.data_provider import MyGekkoForbidden
-from PyMyGekko.data_provider import MyGekkoTooManyRequests
+from .pymygekko import MyGekkoDemoModeClient
+from .pymygekko import MyGekkoLocalApiClient
+from .pymygekko import MyGekkoQueryApiClient
+from .pymygekko.data_provider import MyGekkoError
+from .pymygekko.data_provider import MyGekkoForbidden
+from .pymygekko.data_provider import MyGekkoTooManyRequests
 
 from .const import CONF_CONNECTION_DEMO_MODE
 from .const import CONF_CONNECTION_LOCAL
@@ -109,8 +109,8 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
                 f"MyGekko rate limit reached, retrying in {self.update_interval}"
             ) from exception
         except MyGekkoForbidden as exception:
-            raise ConfigEntryAuthFailed(
-                "MyGekko rejected the credentials (403 Forbidden)"
+            raise UpdateFailed(
+                "MyGekko rejected the credentials or access (403 Forbidden)"
             ) from exception
         except TimeoutError as exception:
             raise UpdateFailed(
@@ -148,7 +148,7 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
                     raise HomeAssistantError(
                         f"Timeout while sending command to MyGekko ({WRITE_TIMEOUT}s)"
                     ) from exception
-                except MyGekkoError as exception:
+                except (MyGekkoError, ClientError) as exception:
                     raise HomeAssistantError(
                         f"MyGekko command failed: {type(exception).__name__}"
                     ) from exception

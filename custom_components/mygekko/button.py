@@ -1,7 +1,7 @@
 """Button platform for MyGekko."""
 from homeassistant.components.button import ButtonEntity
-from PyMyGekko.resources.Lights import Light
-from PyMyGekko.resources.Lights import LightState
+from .pymygekko.resources.Lights import Light
+from .pymygekko.resources.Lights import LightState
 
 from .entity import MyGekkoEntity
 

@@ -39,7 +39,7 @@ def _energy(key, attr, name, unit=UnitOfEnergy.WATT_HOUR):
         attr=attr,
         name=name,
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=unit,
     )
 

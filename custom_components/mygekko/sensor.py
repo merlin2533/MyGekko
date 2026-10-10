@@ -13,16 +13,16 @@ from homeassistant.const import UnitOfRatio
 from homeassistant.const import UnitOfSpeed
 from homeassistant.const import UnitOfTemperature
 from homeassistant.const import UnitOfVolumeFlowRate
-from PyMyGekko.resources.AlarmsLogics import AlarmsLogic
-from PyMyGekko.resources.DoorInterComs import DoorInterCom
-from PyMyGekko.resources.EnergyCosts import EnergyCost
-from PyMyGekko.resources.HotWaterSystems import HotWaterSystem
-from PyMyGekko.resources.HotWaterSystems import HotWaterSystemFeature
-from PyMyGekko.resources.RoomTemps import RoomTemp
-from PyMyGekko.resources.RoomTemps import RoomTempsFeature
-from PyMyGekko.resources.Vents import Vent
-from PyMyGekko.resources.Vents import VentFeature
-from PyMyGekko.resources.Meteo import Meteo
+from .pymygekko.resources.AlarmsLogics import AlarmsLogic
+from .pymygekko.resources.DoorInterComs import DoorInterCom
+from .pymygekko.resources.EnergyCosts import EnergyCost
+from .pymygekko.resources.HotWaterSystems import HotWaterSystem
+from .pymygekko.resources.HotWaterSystems import HotWaterSystemFeature
+from .pymygekko.resources.RoomTemps import RoomTemp
+from .pymygekko.resources.RoomTemps import RoomTempsFeature
+from .pymygekko.resources.Vents import Vent
+from .pymygekko.resources.Vents import VentFeature
+from .pymygekko.resources.Meteo import Meteo
 
 from .sensor_extra import build_extra_sensors
 
@@ -762,7 +762,7 @@ class MyGekkoDoorInterComConnectionState(MyGekkoEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return the extra state of the sensor."""
-        return {"raw_state": self._door_inter_com.sound_mode}
+        return {"raw_state": self._door_inter_com.connection_state}
 
 
 class MyGekkoDoorInterComSoundMode(MyGekkoEntity, SensorEntity):

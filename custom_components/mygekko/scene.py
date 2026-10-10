@@ -3,8 +3,8 @@ from typing import Any
 
 from custom_components.mygekko.entity import MyGekkoControllerEntity
 from homeassistant.components.scene import Scene
-from PyMyGekko.resources.Actions import Action
-from PyMyGekko.resources.Actions import ActionState
+from .pymygekko.resources.Actions import Action
+from .pymygekko.resources.Actions import ActionState
 
 
 

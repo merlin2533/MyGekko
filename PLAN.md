@@ -34,3 +34,9 @@ verschluckte Fehler, Refresh-Sturm nach Schaltbefehlen, Reload-Listener-Leak, Ka
   nicht verschlucken, KeyError bei fehlenden Feldern. Die Integration fängt das ab.
 - Zutrittstüren (Türöffner): bewusst nicht als Entity, sicherheitsrelevant.
 - Tests: Template-Tests sind veraltet und lokal nicht lauffähig (HA 2026.8 braucht Python 3.14).
+
+## Update: Lib vendored
+PyMyGekko 1.6.0 (MIT, Stephan Uhle) liegt jetzt in `custom_components/mygekko/pymygekko/` und wird nicht mehr
+per pip installiert. Dadurch sind die Lib-Fixes in diesem Repo möglich:
+HTTP-Timeouts (15 s), JSON-Fehler als `MyGekkoError`, atomares Lesen von Resources+Status,
+defensive Zugriffe bei fehlenden Feldern, Subscriber-Fehler isoliert, Demo-Daten nicht im Event-Loop.

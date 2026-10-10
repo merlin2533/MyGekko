@@ -8,9 +8,9 @@ from homeassistant.components.water_heater import WaterHeaterEntityFeature
 from homeassistant.const import STATE_OFF
 from homeassistant.const import STATE_ON
 from homeassistant.const import UnitOfTemperature
-from PyMyGekko.resources.HotWaterSystems import HotWaterSystem
-from PyMyGekko.resources.HotWaterSystems import HotWaterSystemFeature
-from PyMyGekko.resources.HotWaterSystems import HotWaterSystemState
+from .pymygekko.resources.HotWaterSystems import HotWaterSystem
+from .pymygekko.resources.HotWaterSystems import HotWaterSystemFeature
+from .pymygekko.resources.HotWaterSystems import HotWaterSystemState
 
 from .entity import MyGekkoEntity
 

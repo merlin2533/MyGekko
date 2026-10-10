@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 from homeassistant.components.switch import SwitchEntity
-from PyMyGekko.resources.EMobils import EMobil
-from PyMyGekko.resources.EMobils import EMobilChargeState
-from PyMyGekko.resources.Loads import Load
-from PyMyGekko.resources.Loads import LoadState
+from .pymygekko.resources.EMobils import EMobil
+from .pymygekko.resources.EMobils import EMobilChargeState
+from .pymygekko.resources.Loads import Load
+from .pymygekko.resources.Loads import LoadState
 
 from .entity import MyGekkoEntity
 

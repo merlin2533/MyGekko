@@ -1,12 +1,12 @@
 """Select platform for MyGekko."""
 from homeassistant.components.select import SelectEntity
 from homeassistant.components.select import SelectEntityDescription
-from PyMyGekko.resources.Clocks import Clock
-from PyMyGekko.resources.Clocks import ClockState
-from PyMyGekko.resources.Vents import Vent
-from PyMyGekko.resources.Vents import VentBypassMode
-from PyMyGekko.resources.Vents import VentWorkingLevel
-from PyMyGekko.resources.Vents import VentWorkingMode
+from .pymygekko.resources.Clocks import Clock
+from .pymygekko.resources.Clocks import ClockState
+from .pymygekko.resources.Vents import Vent
+from .pymygekko.resources.Vents import VentBypassMode
+from .pymygekko.resources.Vents import VentWorkingLevel
+from .pymygekko.resources.Vents import VentWorkingMode
 
 from .entity import MyGekkoEntity
 
