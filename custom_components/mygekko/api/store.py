@@ -120,22 +120,29 @@ class ResourceStore:
         """Return the network information of the controller."""
         return self._globals_network
 
-    def knows_all_keys_of(self, status: dict) -> bool:
-        """Return whether every device of the status document has a name already."""
+    def unnamed_keys(self, status: dict) -> set[tuple[str, str]]:
+        """Return the devices of the status document that have no name yet."""
+        missing = set()
         for spec in SPECS:
-            for key in status.get(spec.kind) or {}:
+            section = status.get(spec.kind)
+            if not isinstance(section, dict):
+                continue
+            for key in section:
                 if spec.accepts(key) and "name" not in self._devices[spec.kind].get(
                     key, {}
                 ):
-                    return False
-        return True
+                    missing.add((spec.kind, key))
+        return missing
 
     # --- updating ----------------------------------------------------------------
 
     def update_resources(self, resources: dict | None) -> None:
         """Read names and static attributes from the resources document."""
         for spec in SPECS:
-            for key, item in ((resources or {}).get(spec.kind) or {}).items():
+            section = (resources or {}).get(spec.kind)
+            if not isinstance(section, dict):
+                continue
+            for key, item in section.items():
                 if not spec.accepts(key) or not isinstance(item, dict):
                     continue
                 if "name" not in item:
@@ -153,7 +160,9 @@ class ResourceStore:
         self._update_globals(status)
         for spec in SPECS:
             try:
-                self._update_spec(spec, status.get(spec.kind) or {}, hardware)
+                section = status.get(spec.kind)
+                if isinstance(section, dict):
+                    self._update_spec(spec, section, hardware)
             except Exception:  # noqa: BLE001
                 # one broken resource type must not stop the others
                 _LOGGER.exception("Reading the status of %s failed", spec.kind)

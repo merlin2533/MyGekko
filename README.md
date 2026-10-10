@@ -83,7 +83,7 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 - Start in VsCode in with the DevContainer extension
 - execute `scripts/setup` to install dependencies
 - execute `scripts/develop` to start HomeAssistant
-- the API layer can be tested without Home Assistant, see `tests/test_api.py`
+- `tests/test_api.py` tests the API layer against a fake MyGekko server; the layer itself has no Home Assistant dependency
 
 ## Credits
 

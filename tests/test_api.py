@@ -97,7 +97,14 @@ async def test_resources_are_read_again_for_new_devices(server):
         await gekko.read_data()
         del gekko.store._devices["lights"]["item0"]["name"]
         await gekko.read_data()
-    assert state["calls"].count("/api/v1/var") == 2
+        assert state["calls"].count("/api/v1/var") == 2
+        # a device that stays unnamed does not trigger a refresh on every poll
+        state["resources"]["lights"].pop("item1")
+        await gekko.read_data()
+        calls = state["calls"].count("/api/v1/var")
+        await gekko.read_data()
+        await gekko.read_data()
+    assert state["calls"].count("/api/v1/var") == calls
 
 
 @pytest.mark.asyncio

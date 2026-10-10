@@ -8,11 +8,13 @@ import pkgutil
 import time
 from typing import Any
 
+from aiohttp import ClientError
 from aiohttp import ClientSession
 from aiohttp import ClientTimeout
 from yarl import URL
 
 from .errors import MyGekkoError
+from .errors import MyGekkoTooManyRequests
 from .errors import error_for_status
 from .models import AccessDoor
 from .models import Action
@@ -43,6 +45,7 @@ CLOUD_HOST = "live.my-gekko.com"
 REQUEST_TIMEOUT = ClientTimeout(total=15, sock_connect=8)
 # Names and URLs of the devices rarely change, so they are not read on every poll.
 RESOURCES_REFRESH_SECONDS = 30 * 60
+RESOURCES_RETRY_SECONDS = 60
 
 
 class MyGekkoClient:
@@ -52,6 +55,8 @@ class MyGekkoClient:
         """Initialize the client."""
         self.store = ResourceStore()
         self._resources_read_at: float | None = None
+        # devices that stay unnamed even after reading the resources
+        self._unnamed: set[tuple[str, str]] = set()
 
     # --- transport, implemented by the subclasses ---------------------------------
 
@@ -76,12 +81,24 @@ class MyGekkoClient:
         status = await self._fetch_status()
         resources = None
         if self._resources_outdated(status):
-            resources = await self._fetch_resources()
+            try:
+                resources = await self._fetch_resources()
+            except MyGekkoTooManyRequests:
+                raise
+            except (MyGekkoError, TimeoutError, ClientError) as err:
+                if self._resources_read_at is None:
+                    raise
+                # the names are known already, the valid status is still used
+                _LOGGER.warning("Refreshing the device names failed: %s", err)
+                self._resources_read_at = (
+                    time.monotonic() - RESOURCES_REFRESH_SECONDS + RESOURCES_RETRY_SECONDS
+                )
 
         # publish only after everything was read successfully
         if resources is not None:
             self.store.update_resources(resources)
             self._resources_read_at = time.monotonic()
+            self._unnamed = self.store.unnamed_keys(status)
         self.store.update_status(status)
 
     def _resources_outdated(self, status: dict) -> bool:
@@ -89,8 +106,8 @@ class MyGekkoClient:
             return True
         if time.monotonic() - self._resources_read_at > RESOURCES_REFRESH_SECONDS:
             return True
-        # a device appeared that has no name yet
-        return not self.store.knows_all_keys_of(status)
+        # a device appeared that has no name and was not already unnamed before
+        return bool(self.store.unnamed_keys(status) - self._unnamed)
 
     # --- devices ------------------------------------------------------------------
 

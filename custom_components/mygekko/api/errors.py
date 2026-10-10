@@ -47,4 +47,4 @@ _STATUS_ERRORS: dict[int, type[MyGekkoError]] = {
 def error_for_status(status: int, body: str = "") -> MyGekkoError:
     """Return the matching exception for an HTTP error status."""
     error_class = _STATUS_ERRORS.get(status, MyGekkoError)
-    return error_class(f"HTTP {status} {body}".strip())
+    return error_class(f"HTTP {status} {body[:200]}".strip())
