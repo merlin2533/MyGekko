@@ -7,7 +7,6 @@ from homeassistant.components.cover import ATTR_TILT_POSITION
 from homeassistant.components.cover import CoverDeviceClass
 from homeassistant.components.cover import CoverEntity
 from homeassistant.components.cover import CoverEntityFeature
-from homeassistant.core import callback
 from PyMyGekko.resources.Blinds import Blind
 from PyMyGekko.resources.Blinds import BlindFeature
 from PyMyGekko.resources.Blinds import BlindState
@@ -35,7 +34,7 @@ class MyGekkoCover(MyGekkoEntity, CoverEntity):
         super().__init__(coordinator, blind, "blinds")
         self._blind = blind
         supported_features = self._blind.supported_features
-        self._attr_supported_features = 0
+        self._attr_supported_features = CoverEntityFeature(0)
 
         if BlindFeature.OPEN_CLOSE in supported_features:
             self._attr_supported_features |= (
@@ -59,11 +58,6 @@ class MyGekkoCover(MyGekkoEntity, CoverEntity):
                 | CoverEntityFeature.STOP_TILT
                 | CoverEntityFeature.SET_TILT_POSITION
             )
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
 
     @property
     def is_closed(self) -> bool | None:

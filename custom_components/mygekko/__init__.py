@@ -8,7 +8,6 @@ import logging
 from custom_components.mygekko.coordinator import MyGekkoDataUpdateCoordinator
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY
-from homeassistant.core_config import Config
 from homeassistant.core import HomeAssistant
 
 from .const import CONF_CONNECTION_MY_GEKKO_CLOUD
@@ -18,11 +17,6 @@ from .const import PLATFORMS
 from .const import STARTUP_MESSAGE
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-
-
-async def async_setup(_hass: HomeAssistant, _config: Config):
-    """Set up this integration using YAML is not supported."""
-    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
@@ -49,6 +43,9 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
     """Migrate old entry."""
     _LOGGER.debug("Migrating from version %s", config_entry.version)
 
+    if config_entry.version > 3:
+        return False
+
     if config_entry.version == 1:
         new = {**config_entry.data}
         new[CONF_CONNECTION_TYPE] = CONF_CONNECTION_MY_GEKKO_CLOUD
@@ -57,8 +54,8 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
 
     if config_entry.version == 2:
         new = {**config_entry.data}
-        new[CONF_API_KEY] = new["apikey"]
-        new.pop("apikey")
+        if "apikey" in new:
+            new[CONF_API_KEY] = new.pop("apikey")
 
         hass.config_entries.async_update_entry(config_entry, data=new, version=3)
 

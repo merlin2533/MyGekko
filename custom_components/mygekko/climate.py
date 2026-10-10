@@ -7,7 +7,6 @@ from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate import ClimateEntityFeature
 from homeassistant.components.climate import HVACMode
 from homeassistant.const import UnitOfTemperature
-from homeassistant.core import callback
 from PyMyGekko.resources.RoomTemps import RoomTemp
 from PyMyGekko.resources.RoomTemps import RoomTempsFeature
 from PyMyGekko.resources.RoomTemps import RoomTempsMode
@@ -53,11 +52,6 @@ class MyGekkoRoomTempClimate(MyGekkoEntity, ClimateEntity):
 
         if RoomTempsFeature.TARGET_TEMPERATURE in supported_features:
             self._attr_supported_features |= ClimateEntityFeature.TARGET_TEMPERATURE
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
 
     @property
     def current_temperature(self) -> float | None:

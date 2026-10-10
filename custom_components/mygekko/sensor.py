@@ -25,6 +25,7 @@ from PyMyGekko.resources.Vents import VentFeature
 from PyMyGekko.resources.Meteo import Meteo
 
 from .const import DOMAIN
+from .sensor_extra import build_extra_sensors
 
 SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
@@ -195,6 +196,8 @@ async def async_setup_entry(hass, entry, async_add_devices):
                         ]
                     )
 
+    async_add_devices(build_extra_sensors(coordinator))
+
     globals_network = coordinator.api.get_globals_network()
     alarms_logics: list[AlarmsLogic] = coordinator.api.get_alarms_logics()
     for alarms_logic in alarms_logics if globals_network else []:
@@ -223,7 +226,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
                 ]
             )
         if (
-            HotWaterSystemFeature.BOTTOM_TEMPERATURE
+            HotWaterSystemFeature.TOP_TEMPERATURE
             in hotwater_system.supported_features
         ):
             async_add_devices(
@@ -318,17 +321,21 @@ class MyGekkoEnergySensor(MyGekkoEntity, SensorEntity):
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        return self._energy_cost.sensor_data["values"][self._index]["value"]
+        values = (self._energy_cost.sensor_data or {}).get("values") or []
+        if self._index >= len(values):
+            return None
+        return values[self._index]["value"]
 
     @property
     def native_unit_of_measurement(self) -> str | None:
         """Return the unit of measurement."""
-        if (
-            unit := self._energy_cost.sensor_data["values"][self._index]["unit"]
-        ) is None or unit == 0:
+        values = (self._energy_cost.sensor_data or {}).get("values") or []
+        if self._index >= len(values):
+            return None
+        if (unit := values[self._index]["unit"]) is None or unit == 0:
             return None
 
-        return SENSOR_UNIT_MAPPING[unit]
+        return SENSOR_UNIT_MAPPING.get(unit)
 
 
 class MyGekkoRoomTempsHumiditySensor(MyGekkoEntity, SensorEntity):
@@ -581,7 +588,7 @@ class MyGekkoMeteoRainSensor(MyGekkoEntity, SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         data = self._meteo.sensor_data.get("rain", None)
-        return float(data) / 60 if data else None  # rain im MyGekko is in l/h
+        return float(data) / 60 if data not in (None, "") else None  # rain im MyGekko is in l/h
 
 
 class MyGekkoMeteoTwilightSensor(MyGekkoEntity, SensorEntity):
@@ -601,7 +608,7 @@ class MyGekkoMeteoTwilightSensor(MyGekkoEntity, SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         data = self._meteo.sensor_data.get("twilight", None)
-        return float(data) if data else None
+        return float(data) if data not in (None, "") else None
 
 
 class MyGekkoMeteoBrightnessSensor(MyGekkoEntity, SensorEntity):
@@ -621,7 +628,7 @@ class MyGekkoMeteoBrightnessSensor(MyGekkoEntity, SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         data = self._meteo.sensor_data.get("brightness", None)
-        return float(data) * 1000 if data else None  # brightness im MyGekko is in klx
+        return float(data) * 1000 if data not in (None, "") else None  # brightness im MyGekko is in klx
 
 
 class MyGekkoMeteoBrightnessWestSensor(MyGekkoEntity, SensorEntity):
@@ -641,7 +648,7 @@ class MyGekkoMeteoBrightnessWestSensor(MyGekkoEntity, SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         data = self._meteo.sensor_data.get("brightnessw", None)
-        return float(data) * 1000 if data else None  # brightness im MyGekko is in klx
+        return float(data) * 1000 if data not in (None, "") else None  # brightness im MyGekko is in klx
 
 
 class MyGekkoMeteoBrightnessEastSensor(MyGekkoEntity, SensorEntity):
@@ -661,7 +668,7 @@ class MyGekkoMeteoBrightnessEastSensor(MyGekkoEntity, SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         data = self._meteo.sensor_data.get("brightnesso", None)
-        return float(data) * 1000 if data else None  # brightness im MyGekko is in klx
+        return float(data) * 1000 if data not in (None, "") else None  # brightness im MyGekko is in klx
 
 
 class MyGekkoMeteoHumiditySensor(MyGekkoEntity, SensorEntity):
@@ -681,7 +688,7 @@ class MyGekkoMeteoHumiditySensor(MyGekkoEntity, SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         data = self._meteo.sensor_data.get("humidity", None)
-        return float(data) if data else None
+        return float(data) if data not in (None, "") else None
 
 
 class MyGekkoMeteoWindSensor(MyGekkoEntity, SensorEntity):
@@ -701,7 +708,7 @@ class MyGekkoMeteoWindSensor(MyGekkoEntity, SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         data = self._meteo.sensor_data.get("wind", None)
-        return float(data) if data else None
+        return float(data) if data not in (None, "") else None
 
 
 class MyGekkoMeteoTemperatureSensor(MyGekkoEntity, SensorEntity):
@@ -721,7 +728,7 @@ class MyGekkoMeteoTemperatureSensor(MyGekkoEntity, SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         data = self._meteo.sensor_data.get("temperature", None)
-        return float(data) if data else None
+        return float(data) if data not in (None, "") else None
 
 
 class MyGekkoDoorInterComConnectionState(MyGekkoEntity, SensorEntity):
@@ -756,7 +763,7 @@ class MyGekkoDoorInterComConnectionState(MyGekkoEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return the extra state of the sensor."""
-        return {"raw_state": self._door_inter_com.connection_state}
+        return {"raw_state": self._door_inter_com.sound_mode}
 
 
 class MyGekkoDoorInterComSoundMode(MyGekkoEntity, SensorEntity):
@@ -780,12 +787,12 @@ class MyGekkoDoorInterComSoundMode(MyGekkoEntity, SensorEntity):
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        return self.STATE_MAP.get(self._door_inter_com.connection_state, None)
+        return self.STATE_MAP.get(self._door_inter_com.sound_mode, None)
 
     @property
     def extra_state_attributes(self):
         """Return the extra state of the sensor."""
-        return {"raw_state": self._door_inter_com.connection_state}
+        return {"raw_state": self._door_inter_com.sound_mode}
 
 
 class MyGekkoDoorInterComMissedCalls(MyGekkoEntity, SensorEntity):

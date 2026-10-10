@@ -120,6 +120,10 @@ class MyGekkoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_GEKKOID],
                 )
                 if valid:
+                    await self.async_set_unique_id(
+                        f"cloud_{user_input[CONF_GEKKOID]}"
+                    )
+                    self._abort_if_unique_id_configured()
                     user_input[CONF_CONNECTION_TYPE] = CONF_CONNECTION_MY_GEKKO_CLOUD
                     return self.async_create_entry(
                         title=user_input[CONF_USERNAME], data=user_input
@@ -149,6 +153,10 @@ class MyGekkoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_PASSWORD],
                 )
                 if valid:
+                    await self.async_set_unique_id(
+                        f"local_{user_input[CONF_IP_ADDRESS]}"
+                    )
+                    self._abort_if_unique_id_configured()
                     user_input[CONF_CONNECTION_TYPE] = CONF_CONNECTION_LOCAL
                     return self.async_create_entry(
                         title=user_input[CONF_USERNAME], data=user_input

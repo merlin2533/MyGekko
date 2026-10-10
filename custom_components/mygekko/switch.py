@@ -1,6 +1,9 @@
 """Switch platform for MyGekko."""
+from __future__ import annotations
+
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import callback
+from PyMyGekko.resources.EMobils import EMobil
+from PyMyGekko.resources.EMobils import EMobilChargeState
 from PyMyGekko.resources.Loads import Load
 from PyMyGekko.resources.Loads import LoadState
 
@@ -14,6 +17,9 @@ async def async_setup_entry(hass, entry, async_add_devices):
     loads = coordinator.api.get_loads()
     if loads is not None:
         async_add_devices(MyGekkoSwitch(coordinator, load) for load in loads)
+    emobils = coordinator.api.get_emobils()
+    if emobils is not None:
+        async_add_devices(MyGekkoEMobilChargeSwitch(coordinator, e) for e in emobils)
 
 
 class MyGekkoSwitch(MyGekkoEntity, SwitchEntity):
@@ -25,11 +31,6 @@ class MyGekkoSwitch(MyGekkoEntity, SwitchEntity):
         """Initialize a MyGekko switch."""
         super().__init__(coordinator, load, "loads")
         self._load = load
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
 
     @property
     def is_on(self) -> bool | None:
@@ -46,3 +47,28 @@ class MyGekkoSwitch(MyGekkoEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):
         """Turn on the switch."""
         await self.coordinator.async_write(self._load.set_state, LoadState.ON_PERMANENT)
+
+
+class MyGekkoEMobilChargeSwitch(MyGekkoEntity, SwitchEntity):
+    """mygekko e-mobility charging switch."""
+
+    _attr_name = "Charging"
+
+    def __init__(self, coordinator, emobil: EMobil):
+        """Initialize the charging switch."""
+        super().__init__(coordinator, emobil, "emobil", "_charge")
+        self._emobil = emobil
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return whether the wallbox is charging."""
+        state = self._emobil.charge_state
+        return None if state is None else state == EMobilChargeState.ON
+
+    async def async_turn_on(self, **kwargs):
+        """Start charging."""
+        await self.coordinator.async_write(self._emobil.start_charge)
+
+    async def async_turn_off(self, **kwargs):
+        """Stop charging."""
+        await self.coordinator.async_write(self._emobil.stop_charge)

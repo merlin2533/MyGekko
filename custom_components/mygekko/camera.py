@@ -4,7 +4,6 @@ import logging
 import aiohttp
 from homeassistant.components.camera import Camera
 from homeassistant.components.camera import CameraEntityFeature
-from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from PyMyGekko.resources.Cams import Cam
 from PyMyGekko.resources.Cams import CamFeature
@@ -46,11 +45,6 @@ class MyGekkoInterComCam(MyGekkoEntity, Camera):
         if DoorInterComFeature.STREAM in supported_features:
             self._attr_supported_features |= CameraEntityFeature.STREAM
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
-
     async def stream_source(self) -> str | None:
         """Return the source of the stream."""
         return self._door_inter_com.stream_url
@@ -61,7 +55,7 @@ class MyGekkoInterComCam(MyGekkoEntity, Camera):
         """Return bytes of camera image."""
         if self._door_inter_com.image_url:
             try:
-                session = async_get_clientsession(self.hass)
+                session = async_get_clientsession(self.hass, verify_ssl=False)
                 async with session.get(
                     self._door_inter_com.image_url, timeout=aiohttp.ClientTimeout(total=10)
                 ) as resp:
@@ -72,7 +66,8 @@ class MyGekkoInterComCam(MyGekkoEntity, Camera):
 
                 return image_bytes
 
-            except (aiohttp.ClientError, TimeoutError):
+            except (aiohttp.ClientError, TimeoutError) as err:
+                _LOGGER.debug("Image fetch failed: %s", err)
                 return None
         else:
             return None
@@ -95,11 +90,6 @@ class MyGekkoCam(MyGekkoEntity, Camera):
         if CamFeature.STREAM in supported_features:
             self._attr_supported_features |= CameraEntityFeature.STREAM
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
-
     async def stream_source(self) -> str | None:
         """Return the source of the stream."""
         return self._cam.stream_url
@@ -110,7 +100,7 @@ class MyGekkoCam(MyGekkoEntity, Camera):
         """Return bytes of camera image."""
         if self._cam.image_url:
             try:
-                session = async_get_clientsession(self.hass)
+                session = async_get_clientsession(self.hass, verify_ssl=False)
                 async with session.get(
                     self._cam.image_url, timeout=aiohttp.ClientTimeout(total=10)
                 ) as resp:
@@ -121,7 +111,8 @@ class MyGekkoCam(MyGekkoEntity, Camera):
 
                 return image_bytes
 
-            except (aiohttp.ClientError, TimeoutError):
+            except (aiohttp.ClientError, TimeoutError) as err:
+                _LOGGER.debug("Image fetch failed: %s", err)
                 return None
         else:
             return None

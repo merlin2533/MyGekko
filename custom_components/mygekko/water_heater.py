@@ -8,7 +8,6 @@ from homeassistant.components.water_heater import WaterHeaterEntityFeature
 from homeassistant.const import STATE_OFF
 from homeassistant.const import STATE_ON
 from homeassistant.const import UnitOfTemperature
-from homeassistant.core import callback
 from PyMyGekko.resources.HotWaterSystems import HotWaterSystem
 from PyMyGekko.resources.HotWaterSystems import HotWaterSystemFeature
 from PyMyGekko.resources.HotWaterSystems import HotWaterSystemState
@@ -43,18 +42,13 @@ class MyGekkoWaterHeater(MyGekkoEntity, WaterHeaterEntity):
         self._hotwater_system = hotwater_system
 
         supported_features = self._hotwater_system.supported_features
-        self._attr_supported_features = 0
+        self._attr_supported_features = WaterHeaterEntityFeature(0)
 
         if HotWaterSystemFeature.ON_OFF in supported_features:
             self._attr_supported_features |= WaterHeaterEntityFeature.ON_OFF
 
         if HotWaterSystemFeature.TARGET_TEMPERATURE in supported_features:
             self._attr_supported_features |= WaterHeaterEntityFeature.TARGET_TEMPERATURE
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs):
         """Turn off the water heater."""

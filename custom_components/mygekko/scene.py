@@ -3,7 +3,6 @@ from typing import Any
 
 from custom_components.mygekko.entity import MyGekkoControllerEntity
 from homeassistant.components.scene import Scene
-from homeassistant.core import callback
 from PyMyGekko.resources.Actions import Action
 from PyMyGekko.resources.Actions import ActionState
 
@@ -28,11 +27,6 @@ class MyGekkoScene(MyGekkoControllerEntity, Scene):
         """Initialize a MyGekko scene."""
         super().__init__(coordinator, action, globals_network, "actions")
         self._action = action
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
 
     async def async_activate(self, **kwargs: Any) -> None:
         """Activate the scene."""

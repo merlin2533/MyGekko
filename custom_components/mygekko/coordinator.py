@@ -13,6 +13,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from PyMyGekko import MyGekkoDemoModeClient
@@ -33,6 +34,7 @@ from .const import DOMAIN
 SCAN_INTERVAL = timedelta(seconds=30)
 MAX_BACKOFF_INTERVAL = timedelta(minutes=5)
 UPDATE_TIMEOUT = 25
+REFRESH_COOLDOWN = 2.0
 WRITE_TIMEOUT = 15
 WRITE_MIN_DELAY = 0.3
 WRITE_RETRIES = 3
@@ -56,6 +58,9 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
             config_entry=entry,
             name=DOMAIN,
             update_interval=SCAN_INTERVAL,
+            request_refresh_debouncer=Debouncer(
+                hass, _LOGGER, cooldown=REFRESH_COOLDOWN, immediate=False
+            ),
         )
 
         client = None

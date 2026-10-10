@@ -5,7 +5,6 @@ from homeassistant.components.light import ATTR_BRIGHTNESS
 from homeassistant.components.light import ATTR_RGB_COLOR
 from homeassistant.components.light import ColorMode
 from homeassistant.components.light import LightEntity
-from homeassistant.core import callback
 from PyMyGekko.resources.Lights import Light
 from PyMyGekko.resources.Lights import LightFeature
 from PyMyGekko.resources.Lights import LightState
@@ -52,17 +51,15 @@ class MyGekkoLight(MyGekkoEntity, LightEntity):
         elif LightFeature.ON_OFF in supported_features:
             self._attr_supported_color_modes.add(ColorMode.ONOFF)
             self._attr_color_mode = ColorMode.ONOFF
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
+        else:
+            self._attr_supported_color_modes.add(ColorMode.ONOFF)
+            self._attr_color_mode = ColorMode.ONOFF
 
     @property
     def is_on(self) -> bool | None:
         """Check whether the light is on."""
         _LOGGER.debug(
-            "The light state of %s is %d", self._light.name, self._light.state
+            "The light state of %s is %s", self._light.name, self._light.state
         )
         return self._light.state == LightState.ON
 
