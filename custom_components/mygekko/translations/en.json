@@ -299,6 +299,9 @@
       },
       "mygekko_light_group_off": {
         "name": "Switch Off"
+      },
+      "mygekko_access_door_open": {
+        "name": "Open"
       }
     },
     "binary_sensor": {
@@ -343,6 +346,11 @@
       },
       "mygekko_multiroom_playing": {
         "name": "Playing"
+      }
+    },
+    "alarm_control_panel": {
+      "mygekko_alarmsystem_zone": {
+        "name": "Zone {zone}"
       }
     }
   },

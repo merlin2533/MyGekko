@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
+from aiohttp import ClientConnectionError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.mygekko.api import MyGekkoError
@@ -103,7 +104,35 @@ async def test_local_flow(hass):
             result["flow_id"], LOCAL_INPUT
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["data"] == LOCAL_CONFIG
+    assert result["data"] == {**LOCAL_CONFIG, "scheme": "https"}
+
+
+async def test_local_flow_falls_back_to_http(hass):
+    """A MyGekko that does not answer on https is tried with http (issue StephanU/MyGekko#365)."""
+    result = await _select(hass, CONF_CONNECTION_LOCAL)
+    with patch(
+        TRY_CONNECT,
+        new_callable=AsyncMock,
+        side_effect=[ClientConnectionError("SSLV3_ALERT_HANDSHAKE_FAILURE"), None],
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], LOCAL_INPUT
+        )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"]["scheme"] == "http"
+
+
+async def test_local_flow_wrong_login_does_not_fall_back(hass):
+    """A rejected login is not retried with http."""
+    result = await _select(hass, CONF_CONNECTION_LOCAL)
+    with patch(
+        TRY_CONNECT, new_callable=AsyncMock, side_effect=MyGekkoError("403")
+    ) as try_connect:
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], LOCAL_INPUT
+        )
+    assert result["errors"] == {"base": "auth_local"}
+    assert try_connect.await_count == 1
 
 
 async def test_local_flow_is_unique(hass):

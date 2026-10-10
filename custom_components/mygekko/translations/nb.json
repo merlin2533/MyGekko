@@ -300,6 +300,9 @@
       },
       "mygekko_light_group_off": {
         "name": "Uitschakelen"
+      },
+      "mygekko_access_door_open": {
+        "name": "Åpne"
       }
     },
     "binary_sensor": {
@@ -344,6 +347,11 @@
       },
       "mygekko_multiroom_playing": {
         "name": "Spiller"
+      }
+    },
+    "alarm_control_panel": {
+      "mygekko_alarmsystem_zone": {
+        "name": "Sone {zone}"
       }
     }
   },
