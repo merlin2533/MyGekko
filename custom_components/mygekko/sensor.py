@@ -197,7 +197,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
 
     globals_network = coordinator.api.get_globals_network()
     alarms_logics: list[AlarmsLogic] = coordinator.api.get_alarms_logics()
-    for alarms_logic in alarms_logics:
+    for alarms_logic in alarms_logics if globals_network else []:
         async_add_devices(
             [MyGekkoAlarmsLogicsSensor(coordinator, alarms_logic, globals_network)]
         )

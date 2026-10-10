@@ -1,15 +1,16 @@
 """Adds config flow for MyGekko."""
+import asyncio
 import logging
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from aiohttp import ClientConnectorError
+from aiohttp import ClientError
 from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY
 from homeassistant.const import CONF_IP_ADDRESS
 from homeassistant.const import CONF_PASSWORD
 from homeassistant.const import CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from PyMyGekko import MyGekkoLocalApiClient
 from PyMyGekko import MyGekkoQueryApiClient
 from PyMyGekko.data_provider import MyGekkoError
@@ -164,12 +165,13 @@ class MyGekkoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _test_credentials_cloud_mygekko(self, username, apikey, gekkoid):
         """Return true if credentials is valid."""
         try:
-            session = async_create_clientsession(self.hass)
+            session = async_get_clientsession(self.hass)
             client = MyGekkoQueryApiClient(username, apikey, gekkoid, session)
-            await client.try_connect()
+            async with asyncio.timeout(15):
+                await client.try_connect()
             return True
-        except ClientConnectorError:
-            _LOGGER.exception("ClientConnectorError")
+        except (ClientError, TimeoutError):
+            _LOGGER.exception("Connection to MyGekko failed")
         except MyGekkoError:
             _LOGGER.exception("MyGekkoError")
         return False
@@ -177,12 +179,13 @@ class MyGekkoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _test_credentials_local_mygekko(self, ip_address, username, password):
         """Return true if credentials is valid."""
         try:
-            session = async_create_clientsession(self.hass, verify_ssl=False)
+            session = async_get_clientsession(self.hass, verify_ssl=False)
             client = MyGekkoLocalApiClient(username, password, session, ip_address)
-            await client.try_connect()
+            async with asyncio.timeout(15):
+                await client.try_connect()
             return True
-        except ClientConnectorError:
-            _LOGGER.exception("ClientConnectorError")
+        except (ClientError, TimeoutError):
+            _LOGGER.exception("Connection to MyGekko failed")
         except MyGekkoError:
             _LOGGER.exception("MyGekkoError")
 

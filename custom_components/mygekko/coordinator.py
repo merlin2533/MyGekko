@@ -1,4 +1,5 @@
 """Data Update Coordinator for the MyGekko integration."""
+import asyncio
 import logging
 from datetime import timedelta
 
@@ -8,13 +9,18 @@ from homeassistant.const import CONF_IP_ADDRESS
 from homeassistant.const import CONF_PASSWORD
 from homeassistant.const import CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.exceptions import ConfigEntryError
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from PyMyGekko import MyGekkoDemoModeClient
 from PyMyGekko import MyGekkoLocalApiClient
 from PyMyGekko import MyGekkoQueryApiClient
+from PyMyGekko.data_provider import MyGekkoError
+from PyMyGekko.data_provider import MyGekkoForbidden
+from PyMyGekko.data_provider import MyGekkoTooManyRequests
 
 from .const import CONF_CONNECTION_DEMO_MODE
 from .const import CONF_CONNECTION_LOCAL
@@ -25,6 +31,12 @@ from .const import DOMAIN
 
 
 SCAN_INTERVAL = timedelta(seconds=30)
+MAX_BACKOFF_INTERVAL = timedelta(minutes=5)
+UPDATE_TIMEOUT = 25
+WRITE_TIMEOUT = 15
+WRITE_MIN_DELAY = 0.3
+WRITE_RETRIES = 3
+WRITE_RETRY_DELAY = 2
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -38,7 +50,13 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
         entry: ConfigEntry,
     ) -> None:
         """Initialize."""
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
+        super().__init__(
+            hass,
+            _LOGGER,
+            config_entry=entry,
+            name=DOMAIN,
+            update_interval=SCAN_INTERVAL,
+        )
 
         client = None
 
@@ -68,12 +86,64 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
             raise ConfigEntryError
 
         self.api = client
+        self._write_lock = asyncio.Lock()
 
     async def _async_update_data(self):
         """Update data via library."""
-        _LOGGER.debug("_async_update_data ")
+        _LOGGER.debug("_async_update_data")
         try:
-            return await self.api.read_data()
+            async with asyncio.timeout(UPDATE_TIMEOUT):
+                result = await self.api.read_data()
+        except MyGekkoTooManyRequests as exception:
+            # Rate limited by MyGekko: back off instead of hammering the API.
+            current = self.update_interval or SCAN_INTERVAL
+            self.update_interval = min(current * 2, MAX_BACKOFF_INTERVAL)
+            raise UpdateFailed(
+                f"MyGekko rate limit reached, retrying in {self.update_interval}"
+            ) from exception
+        except MyGekkoForbidden as exception:
+            raise ConfigEntryAuthFailed(
+                "MyGekko rejected the credentials (403 Forbidden)"
+            ) from exception
+        except TimeoutError as exception:
+            raise UpdateFailed(
+                f"Timeout after {UPDATE_TIMEOUT}s while fetching MyGekko data"
+            ) from exception
         except Exception as exception:
-            _LOGGER.exception("_async_update_data failed")
-            raise UpdateFailed() from exception
+            raise UpdateFailed(
+                f"Error fetching MyGekko data: {type(exception).__name__}: {exception}"
+            ) from exception
+
+        if self.update_interval != SCAN_INTERVAL:
+            _LOGGER.info("MyGekko API reachable again, restoring update interval")
+            self.update_interval = SCAN_INTERVAL
+        return result
+
+    async def async_write(self, method, *args) -> None:
+        """Send a command to MyGekko.
+
+        Commands are serialized, spaced out, retried on rate limiting and
+        followed by a (debounced) refresh. Errors surface as HomeAssistantError.
+        """
+        async with self._write_lock:
+            for attempt in range(1, WRITE_RETRIES + 1):
+                try:
+                    async with asyncio.timeout(WRITE_TIMEOUT):
+                        await method(*args)
+                    break
+                except MyGekkoTooManyRequests as exception:
+                    if attempt == WRITE_RETRIES:
+                        raise HomeAssistantError(
+                            "MyGekko rate limit reached, command was not executed"
+                        ) from exception
+                    await asyncio.sleep(WRITE_RETRY_DELAY * attempt)
+                except TimeoutError as exception:
+                    raise HomeAssistantError(
+                        f"Timeout while sending command to MyGekko ({WRITE_TIMEOUT}s)"
+                    ) from exception
+                except MyGekkoError as exception:
+                    raise HomeAssistantError(
+                        f"MyGekko command failed: {type(exception).__name__}"
+                    ) from exception
+            await asyncio.sleep(WRITE_MIN_DELAY)
+        await self.async_request_refresh()

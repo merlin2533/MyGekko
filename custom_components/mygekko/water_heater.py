@@ -59,14 +59,12 @@ class MyGekkoWaterHeater(MyGekkoEntity, WaterHeaterEntity):
     async def async_turn_off(self, **kwargs):
         """Turn off the water heater."""
         _LOGGER.debug("Switch off water heater %s", self._hotwater_system.name)
-        await self._hotwater_system.set_state(HotWaterSystemState.OFF)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_write(self._hotwater_system.set_state, HotWaterSystemState.OFF)
 
     async def async_turn_on(self, **kwargs):
         """Turn on the water heater."""
         _LOGGER.debug("Switch on water heater %s", self._hotwater_system.name)
-        await self._hotwater_system.set_state(HotWaterSystemState.ON)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_write(self._hotwater_system.set_state, HotWaterSystemState.ON)
 
     @property
     def target_temperature(self) -> float | None:
@@ -81,10 +79,7 @@ class MyGekkoWaterHeater(MyGekkoEntity, WaterHeaterEntity):
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
-        await self._hotwater_system.set_target_temperature(
-            float(kwargs[ATTR_TEMPERATURE])
-        )
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_write(self._hotwater_system.set_target_temperature, float(kwargs[ATTR_TEMPERATURE]))
 
     @property
     def current_temperature(self) -> float | None:

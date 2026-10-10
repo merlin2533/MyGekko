@@ -69,19 +69,21 @@ class MyGekkoLight(MyGekkoEntity, LightEntity):
     async def async_turn_off(self, **kwargs):
         """Turn off the light."""
         _LOGGER.debug("Switch off light %s", self._light.name)
-        await self._light.set_state(LightState.OFF)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_write(self._light.set_state, LightState.OFF)
 
     async def async_turn_on(self, **kwargs):
         """Turn on the light."""
         _LOGGER.debug("Switch on light %s", self._light.name)
         if ATTR_RGB_COLOR in kwargs and kwargs[ATTR_RGB_COLOR]:
-            await self._light.set_rgb_color(kwargs[ATTR_RGB_COLOR])
+            await self.coordinator.async_write(
+                self._light.set_rgb_color, kwargs[ATTR_RGB_COLOR]
+            )
         elif ATTR_BRIGHTNESS in kwargs and kwargs[ATTR_BRIGHTNESS]:
-            await self._light.set_brightness(round(kwargs[ATTR_BRIGHTNESS] / 255 * 100))
+            await self.coordinator.async_write(
+                self._light.set_brightness, round(kwargs[ATTR_BRIGHTNESS] / 255 * 100)
+            )
         else:
-            await self._light.set_state(LightState.ON)
-        await self.coordinator.async_request_refresh()
+            await self.coordinator.async_write(self._light.set_state, LightState.ON)
 
     @property
     def brightness(self) -> int | None:

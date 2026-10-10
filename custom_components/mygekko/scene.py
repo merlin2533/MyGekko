@@ -15,7 +15,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     actions = coordinator.api.get_actions()
     globals_network = coordinator.api.get_globals_network()
-    if actions is not None:
+    if actions is not None and globals_network:
         async_add_devices(
             MyGekkoScene(coordinator, action, globals_network) for action in actions
         )
@@ -36,5 +36,4 @@ class MyGekkoScene(MyGekkoControllerEntity, Scene):
 
     async def async_activate(self, **kwargs: Any) -> None:
         """Activate the scene."""
-        await self._action.set_state(ActionState.ON)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_write(self._action.set_state, ActionState.ON)
