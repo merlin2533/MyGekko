@@ -99,6 +99,12 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
         self._write_lock = asyncio.Lock()
         self._skipped_polls = 0
         self._backoff_until = 0.0
+        self._has_data = False
+
+    @property
+    def is_backing_off(self) -> bool:
+        """Return whether polls are currently skipped because of the rate limit."""
+        return self._has_data and time.monotonic() < self._backoff_until
 
     async def _async_update_data(self):
         """Update data via the MyGekko API.
@@ -108,7 +114,7 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
         refreshes requested in the meantime are dropped. Only if the rate limit
         persists for several polls the entities are set to unavailable.
         """
-        if time.monotonic() < self._backoff_until:
+        if self.is_backing_off:
             _LOGGER.debug("Skipping update, MyGekko rate limit backoff is active")
             return self.data
 
@@ -121,7 +127,8 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
             self.update_interval = min(current * 2, MAX_BACKOFF_INTERVAL)
             self._backoff_until = time.monotonic() + self.update_interval.total_seconds()
             self._skipped_polls += 1
-            if self._skipped_polls > MAX_SKIPPED_POLLS:
+            # without data (e.g. at startup) there is nothing to keep: setup must retry
+            if not self._has_data or self._skipped_polls > MAX_SKIPPED_POLLS:
                 raise UpdateFailed(
                     f"MyGekko rate limit persists, retrying in {self.update_interval}"
                 ) from exception
@@ -147,6 +154,7 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
 
         if self._skipped_polls or self.update_interval != SCAN_INTERVAL:
             _LOGGER.info("MyGekko API reachable again, restoring update interval")
+        self._has_data = True
         self._skipped_polls = 0
         self._backoff_until = 0.0
         self.update_interval = SCAN_INTERVAL
