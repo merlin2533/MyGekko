@@ -68,7 +68,8 @@
       "already_configured": "This MyGekko is already configured.",
       "reconfigure_successful": "The configuration was updated.",
       "reconfigure_not_supported": "The demo mode cannot be reconfigured.",
-      "reauth_successful": "The credentials were updated."
+      "reauth_successful": "The credentials were updated.",
+      "wrong_account": "The credentials belong to a different MyGekko."
     }
   },
   "entity": {

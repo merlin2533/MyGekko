@@ -148,7 +148,7 @@ class MyGekkoAlarmZoneBinarySensor(MyGekkoBinarySensor):
                 device_class=BinarySensorDeviceClass.SAFETY,
             )
         super().__init__(
-            coordinator, device, "alarmsystem", description, {"zone": zone_name}
+            coordinator, device, "alarm_system", description, {"zone": zone_name}
         )
 
     @property

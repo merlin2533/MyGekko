@@ -242,7 +242,7 @@ class MyGekkoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return f"local_{user_input[CONF_IP_ADDRESS]}", None if valid else "auth_local"
 
-    async def _update_entry_step(self, step_id, entry, user_input):
+    async def _update_entry_step(self, step_id, entry, user_input, *, reauth=False):
         """Show and process the form that changes the credentials of an entry."""
         connection_type = entry.data.get(CONF_CONNECTION_TYPE)
         schema = self._schema_for(connection_type)
@@ -253,6 +253,9 @@ class MyGekkoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             unique_id, error = await self._validate(connection_type, user_input)
             if error is None:
+                if reauth and entry.unique_id not in (None, unique_id):
+                    # the login must stay the one of the same MyGekko
+                    return self.async_abort(reason="wrong_account")
                 existing = await self.async_set_unique_id(unique_id)
                 if existing is not None and existing.entry_id != entry.entry_id:
                     return self.async_abort(reason="already_configured")
@@ -282,7 +285,7 @@ class MyGekkoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reauth_confirm(self, user_input=None):
         """Ask for new credentials."""
         return await self._update_entry_step(
-            "reauth_confirm", self._get_reauth_entry(), user_input
+            "reauth_confirm", self._get_reauth_entry(), user_input, reauth=True
         )
 
     async def _test_credentials_cloud_mygekko(self, username, apikey, gekkoid):

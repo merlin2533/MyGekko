@@ -28,15 +28,22 @@ def controller_device_info(
 ) -> DeviceInfo:
     """Return the device of the MyGekko controller itself."""
     hardware = globals_network.get("hardware")
-    return DeviceInfo(
+    if hardware == "legacy":
+        hardware = None
+    info = DeviceInfo(
         identifiers={(DOMAIN, controller_device_id(globals_network))},
         name=globals_network["gekkoname"],
         manufacturer=MANUFACTURER,
-        model=hardware if hardware and hardware != "legacy" else "myGEKKO",
-        sw_version=globals_network.get("version"),
-        hw_version=hardware,
-        configuration_url=configuration_url,
+        model=hardware or "myGEKKO",
     )
+    # only known values: an unset value would erase what was registered before
+    if globals_network.get("version"):
+        info["sw_version"] = globals_network["version"]
+    if hardware:
+        info["hw_version"] = hardware
+    if configuration_url:
+        info["configuration_url"] = configuration_url
+    return info
 
 
 class _MyGekkoBaseEntity(CoordinatorEntity):
@@ -76,9 +83,8 @@ class MyGekkoEntity(_MyGekkoBaseEntity):
             name=entity.name,
             model=getattr(entity, "model", None),
         )
-        controller = controller_device_id(coordinator.api.get_globals_network())
-        if controller:
-            info["via_device"] = (DOMAIN, controller)
+        if coordinator.controller_registry_id:
+            info["via_device_id"] = coordinator.controller_registry_id
         page = getattr(entity, "page", None)
         if page and coordinator.config_entry.options.get(CONF_USE_PAGES_AS_AREAS):
             info["suggested_area"] = page

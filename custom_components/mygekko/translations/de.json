@@ -68,7 +68,8 @@
       "already_configured": "Dieses MyGekko ist bereits eingerichtet.",
       "reconfigure_successful": "Die Konfiguration wurde aktualisiert.",
       "reconfigure_not_supported": "Der Demo-Modus kann nicht neu konfiguriert werden.",
-      "reauth_successful": "Die Zugangsdaten wurden aktualisiert."
+      "reauth_successful": "Die Zugangsdaten wurden aktualisiert.",
+      "wrong_account": "Die Zugangsdaten gehören zu einem anderen MyGekko."
     }
   },
   "entity": {

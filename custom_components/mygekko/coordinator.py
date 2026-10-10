@@ -44,6 +44,8 @@ WRITE_TIMEOUT = 15
 WRITE_MIN_DELAY = 0.3
 # rate limited polls that are skipped silently before the entities become unavailable
 MAX_SKIPPED_POLLS = 5
+# rejected requests (HTTP 401/403) before the user has to log in again
+MAX_AUTH_FAILURES = 3
 WRITE_RETRIES = 3
 WRITE_RETRY_DELAY = 2
 
@@ -107,6 +109,8 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
         self._skipped_polls = 0
         self._backoff_until = 0.0
         self._has_data = False
+        self._auth_failures = 0
+        self.controller_registry_id: str | None = None
 
     @property
     def base_interval(self) -> timedelta:
@@ -154,12 +158,15 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
                 result = await self.api.read_data()
         except MyGekkoTooManyRequests as exception:
             current = self.update_interval or self._base_interval
-            self.update_interval = min(current * 2, MAX_BACKOFF_INTERVAL)
+            self.update_interval = min(
+                current * 2, max(MAX_BACKOFF_INTERVAL, self._base_interval)
+            )
             self._backoff_until = time.monotonic() + self.update_interval.total_seconds()
             self._skipped_polls += 1
             # without data (e.g. at startup) there is nothing to keep: setup must retry
             if not self._has_data or self._skipped_polls > MAX_SKIPPED_POLLS:
-                self._create_rate_limit_issue()
+                if self._skipped_polls > MAX_SKIPPED_POLLS:
+                    self._create_rate_limit_issue()
                 raise UpdateFailed(
                     f"MyGekko rate limit persists, retrying in {self.update_interval}"
                 ) from exception
@@ -171,8 +178,14 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
             )
             return self.data
         except MyGekkoForbidden as exception:
-            raise ConfigEntryAuthFailed(
-                "MyGekko rejected the credentials or access"
+            # a running integration tolerates a few rejections before asking the user
+            self._auth_failures += 1
+            if not self._has_data or self._auth_failures >= MAX_AUTH_FAILURES:
+                raise ConfigEntryAuthFailed(
+                    "MyGekko rejected the credentials or access"
+                ) from exception
+            raise UpdateFailed(
+                f"MyGekko rejected the request ({self._auth_failures}/{MAX_AUTH_FAILURES})"
             ) from exception
         except TimeoutError as exception:
             raise UpdateFailed(
@@ -186,6 +199,7 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
         if self._skipped_polls or self.update_interval != self._base_interval:
             _LOGGER.info("MyGekko API reachable again, restoring update interval")
         self._has_data = True
+        self._auth_failures = 0
         self._skipped_polls = 0
         self._backoff_until = 0.0
         self.update_interval = self._base_interval

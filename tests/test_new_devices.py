@@ -4,6 +4,8 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.mygekko.const import DOMAIN
@@ -132,3 +134,47 @@ async def test_climate_action_and_floor_temperature(hass, setup_demo):
         if state.entity_id.endswith("_floor_temperature")
     ]
     assert [state.state for state in floor] == ["24.5"]
+
+
+async def test_unknown_element_info_does_not_break_updates(hass):
+    """An undocumented elementInfo value neither crashes nor shows an attribute."""
+
+    def odd_value(status):
+        for key, light in status["lights"].items():
+            if key.startswith("item"):
+                fields = light["sumstate"]["value"].split(";")
+                fields[4] = "9"
+                light["sumstate"]["value"] = ";".join(fields)
+
+    await _setup_with(hass, odd_value)
+    lights = hass.states.async_all("light")
+    assert lights
+    assert all(light.state != "unavailable" for light in lights)
+    assert all("element_status" not in light.attributes for light in lights)
+
+
+async def test_tolerant_player_and_zone_alarm_values(hass):
+    """Paused players are not playing, an undocumented zone alarm counts as alarm."""
+
+    def odd_values(status):
+        status["multirooms"]["item0"]["sumstate"]["value"] = status["multirooms"][
+            "item0"
+        ]["sumstate"]["value"].replace("1;35", "2;35", 1)
+        status["alarmsystem"]["item0"]["sumstate"]["value"] = "0;1;1;1;0;0;0;1"
+
+    await _setup_with(hass, odd_values)
+    assert hass.states.get("binary_sensor.living_room_audio_playing").state == "off"
+    assert hass.states.get("binary_sensor.alarm_system_zone_home_alarm").state == "on"
+
+
+async def test_alarm_system_is_one_device(hass, setup_demo):
+    """All entities of the alarm system belong to the same device."""
+    registry = dr.async_get(hass)
+    devices = [
+        device
+        for device in dr.async_entries_for_config_entry(registry, setup_demo.entry_id)
+        if device.name == "Alarm system"
+    ]
+    assert len(devices) == 1
+    entities = er.async_entries_for_device(er.async_get(hass), devices[0].id)
+    assert len(entities) == 5

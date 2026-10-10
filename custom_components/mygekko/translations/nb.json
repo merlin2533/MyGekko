@@ -69,7 +69,8 @@
       "already_configured": "Denne MyGekko er allerede konfigurert.",
       "reconfigure_successful": "Konfigurasjonen ble oppdatert.",
       "reconfigure_not_supported": "Demomodus kan ikke konfigureres på nytt.",
-      "reauth_successful": "Påloggingsinformasjonen ble oppdatert."
+      "reauth_successful": "Påloggingsinformasjonen ble oppdatert.",
+      "wrong_account": "Påloggingsinformasjonen tilhører en annen MyGekko."
     }
   },
   "entity": {

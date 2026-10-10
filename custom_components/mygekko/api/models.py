@@ -78,6 +78,14 @@ _ZIMMERMANN = (VentDeviceModel.ZIMMERMANN_V1, VentDeviceModel.ZIMMERMANN_V2)
 ELEMENT_STATUS = {0: "ok", 1: "manual_off", 2: "manual_on", 3: "locked", 4: "alarm"}
 
 
+def _zone_alarm_state(raw: str) -> AlarmSystemZoneAlarmState:
+    """Return the zone alarm state, an undocumented value counts as alarm."""
+    value = int(float(raw))
+    if value in (item.value for item in AlarmSystemZoneAlarmState):
+        return AlarmSystemZoneAlarmState(value)
+    return AlarmSystemZoneAlarmState.ALARM
+
+
 def _to_enum(enum: type[Enum]) -> Callable[[str], Any]:
     return lambda raw: enum(int(float(raw)))
 
@@ -176,7 +184,7 @@ class Device(ReadOnlyEntity):
     def element_status(self) -> str | None:
         """Return the status of the element: ok, manual_off, manual_on, locked or alarm."""
         return self._read(
-            "elementInfo", lambda raw: ELEMENT_STATUS[int(float(raw))]
+            "elementInfo", lambda raw: ELEMENT_STATUS.get(int(float(raw)))
         )
 
 
@@ -516,8 +524,8 @@ class AlarmSystem(Device):
     zone2_device_status = _enum("zone2DeviceStatus", OnOffState)
     zone1_sharp_state = _enum("zone1SharpState", AlarmSystemSharpState)
     zone2_sharp_state = _enum("zone2SharpState", AlarmSystemSharpState)
-    zone1_alarm_state = _enum("zone1AlarmState", AlarmSystemZoneAlarmState)
-    zone2_alarm_state = _enum("zone2AlarmState", AlarmSystemZoneAlarmState)
+    zone1_alarm_state = _field("zone1AlarmState", _zone_alarm_state)
+    zone2_alarm_state = _field("zone2AlarmState", _zone_alarm_state)
 
 
 class MultiRoom(Device):
@@ -525,7 +533,10 @@ class MultiRoom(Device):
 
     SPEC = schema.MULTIROOMS
 
-    player_state = _enum("playerCurrentState", OnOffState)
+    player_state = _field(
+        "playerCurrentState",
+        lambda raw: OnOffState.ON if int(float(raw)) == 1 else OnOffState.OFF,
+    )
     volume = _float("currentVolumeLevel")
     playing_time = _int("currentPlayingTime")
     audio_title = _field("currentAudioTitle")

@@ -207,3 +207,19 @@ async def test_reauth_with_wrong_credentials(hass):
         )
     assert result["errors"] == {"base": "auth_cloud"}
     assert entry.data["api_key"] == "secret"
+
+
+async def test_reauth_cannot_switch_to_another_gekko(hass):
+    """The login of a different MyGekko is not accepted for this entry."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, version=3, data=CLOUD_CONFIG, unique_id="cloud_A1B2C3"
+    )
+    entry.add_to_hass(hass)
+    result = await entry.start_reauth_flow(hass)
+    with patch(TRY_CONNECT, new_callable=AsyncMock):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {**CLOUD_INPUT, "gekkoid": "OTHER"}
+        )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_account"
+    assert entry.data["gekkoid"] == "A1B2C3"
