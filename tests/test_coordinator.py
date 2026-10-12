@@ -3,6 +3,8 @@ import json
 from datetime import timedelta
 from unittest.mock import patch
 
+import pytest
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -22,31 +24,25 @@ def _demo(name):
 READ_DATA = "custom_components.mygekko.api.MyGekkoDemoModeClient.read_data"
 
 
-async def test_rate_limit_skips_polls_and_keeps_entities_available(hass, setup_demo):
-    """HTTP 429 skips the poll, the entities keep their values."""
+async def test_rate_limit_pauses_and_keeps_entities_available(hass, setup_demo):
+    """HTTP 429 pauses the requests for 4 minutes, the entities keep their values."""
     coordinator = setup_demo.runtime_data
-    light = hass.states.get("light.kitchen")
-    assert light.state == "on"
+    assert hass.states.get("light.kitchen").state == "on"
 
     with patch(READ_DATA, side_effect=MyGekkoTooManyRequests("429")):
-        for skipped in range(1, coordinator_module.MAX_SKIPPED_POLLS + 1):
+        for _ in range(10):
             coordinator._backoff_until = 0
             await coordinator.async_refresh()
             assert coordinator.last_update_success
             assert hass.states.get("light.kitchen").state == "on"
-            assert coordinator._skipped_polls == skipped
-
-        # the interval grows, but never beyond the maximum
-        assert coordinator.update_interval == coordinator_module.MAX_BACKOFF_INTERVAL
-
-        # the rate limit persists: now the problem becomes visible
-        coordinator._backoff_until = 0
-        await coordinator.async_refresh()
-        assert not coordinator.last_update_success
+    assert coordinator.update_interval == coordinator_module.RATE_LIMIT_PAUSE
+    assert coordinator.api_state == coordinator_module.API_STATE_RATE_LIMITED
+    assert coordinator.rate_limited_until is not None
+    assert hass.states.get("sensor.mygekko_demo_api_status").state == "rate_limited"
 
 
 async def test_refresh_is_dropped_during_backoff(hass, setup_demo):
-    """No request is sent while the rate limit backoff is active."""
+    """No request is sent while the rate limit pause is active."""
     coordinator = setup_demo.runtime_data
     with patch(READ_DATA, side_effect=MyGekkoTooManyRequests("429")) as read_data:
         await coordinator.async_refresh()
@@ -66,34 +62,46 @@ async def test_recovery_restores_the_interval(hass, setup_demo):
     coordinator._backoff_until = 0
     await coordinator.async_refresh()
     assert coordinator.last_update_success
-    assert coordinator.update_interval == coordinator.base_interval
-    assert coordinator._skipped_polls == 0
+    assert coordinator.api_state == coordinator_module.API_STATE_OK
+    assert coordinator.rate_limited_until is None
     assert coordinator.update_interval == timedelta(seconds=30)
 
 
-async def test_errors_become_update_failed_with_message(hass, setup_demo):
-    """Other errors mark the update as failed with a readable message."""
+async def test_errors_keep_the_state_for_a_while(hass, setup_demo, freezer):
+    """A failing poll keeps the last state, a lasting outage becomes visible."""
     coordinator = setup_demo.runtime_data
     with patch(READ_DATA, side_effect=TimeoutError):
         await coordinator.async_refresh()
+        assert coordinator.last_update_success
+        assert hass.states.get("light.kitchen").state == "on"
+        assert coordinator.api_state == coordinator_module.API_STATE_ERROR
+
+        freezer.tick(coordinator_module.ERROR_GRACE)
+        await coordinator.async_refresh()
     assert not coordinator.last_update_success
     assert "Timeout" in str(coordinator.last_exception)
+    assert hass.states.get("light.kitchen").state == "unavailable"
+    # the connection state stays visible
+    assert hass.states.get("sensor.mygekko_demo_api_status").state == "error"
+
+    await coordinator.async_refresh()
+    assert hass.states.get("light.kitchen").state == "on"
 
 
-async def test_persistent_rate_limit_creates_a_repair_issue(hass, setup_demo):
+async def test_persistent_rate_limit_creates_a_repair_issue(hass, setup_demo, freezer):
     """A rate limit that does not go away is reported, and cleared on recovery."""
     coordinator = setup_demo.runtime_data
     registry = ir.async_get(hass)
     issue_id = f"rate_limited_{setup_demo.entry_id}"
 
     with patch(READ_DATA, side_effect=MyGekkoTooManyRequests("429")):
-        for _ in range(coordinator_module.MAX_SKIPPED_POLLS):
-            coordinator._backoff_until = 0
-            await coordinator.async_refresh()
+        await coordinator.async_refresh()
         assert registry.async_get_issue(DOMAIN, issue_id) is None
 
+        freezer.tick(coordinator_module.RATE_LIMIT_ISSUE_AFTER)
         coordinator._backoff_until = 0
         await coordinator.async_refresh()
+    assert coordinator.last_update_success
     issue = registry.async_get_issue(DOMAIN, issue_id)
     assert issue is not None
     assert issue.translation_key == "rate_limited"
@@ -101,6 +109,50 @@ async def test_persistent_rate_limit_creates_a_repair_issue(hass, setup_demo):
     coordinator._backoff_until = 0
     await coordinator.async_refresh()
     assert registry.async_get_issue(DOMAIN, issue_id) is None
+
+
+async def test_restart_uses_the_saved_state(hass, setup_demo):
+    """After a restart during a rate limit the saved state is shown, no request is sent."""
+    coordinator = setup_demo.runtime_data
+    with patch(READ_DATA, side_effect=MyGekkoTooManyRequests("429")):
+        await coordinator.async_refresh()
+    saved = coordinator._cache_data()
+
+    await hass.config_entries.async_unload(setup_demo.entry_id)
+    with patch(
+        "homeassistant.helpers.storage.Store.async_load", return_value=saved
+    ), patch(READ_DATA) as read_data:
+        await hass.config_entries.async_setup(setup_demo.entry_id)
+        await hass.async_block_till_done()
+    assert read_data.call_count == 0
+    assert setup_demo.runtime_data.api_state == coordinator_module.API_STATE_RATE_LIMITED
+    assert hass.states.get("light.kitchen").state == "on"
+
+
+async def test_startup_error_uses_the_saved_state(hass, setup_demo):
+    """MyGekko not reachable at startup: the saved state is used."""
+    saved = setup_demo.runtime_data._cache_data()
+    saved["rate_limited_until"] = None
+    await hass.config_entries.async_unload(setup_demo.entry_id)
+    with patch(
+        "homeassistant.helpers.storage.Store.async_load", return_value=saved
+    ), patch(READ_DATA, side_effect=MyGekkoTooManyRequests("429")):
+        await hass.config_entries.async_setup(setup_demo.entry_id)
+        await hass.async_block_till_done()
+    assert hass.states.get("light.kitchen").state == "on"
+    assert setup_demo.runtime_data.is_backing_off
+
+
+async def test_failed_write_pauses_the_polls(hass, setup_demo):
+    """A command rejected with HTTP 429 also pauses the polls."""
+    coordinator = setup_demo.runtime_data
+    setup_demo.write.side_effect = MyGekkoTooManyRequests("429")
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            "light", "turn_off", {"entity_id": "light.kitchen"}, blocking=True
+        )
+    assert coordinator.is_backing_off
+    assert hass.states.get("light.kitchen").state == "on"
 
 
 async def test_configured_interval_is_the_base_interval(hass):
@@ -171,7 +223,7 @@ async def test_rejected_requests_ask_for_login_after_a_few_times(hass):
     ):
         for _ in range(coordinator_module.MAX_AUTH_FAILURES - 1):
             await coordinator.async_refresh()
-            assert not coordinator.last_update_success
+            assert coordinator.api_state == coordinator_module.API_STATE_ERROR
             assert not hass.config_entries.flow.async_progress_by_handler(DOMAIN)
         await coordinator.async_refresh()
     await hass.async_block_till_done()
