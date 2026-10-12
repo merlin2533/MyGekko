@@ -3,8 +3,6 @@ import json
 from datetime import timedelta
 from unittest.mock import patch
 
-import pytest
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -147,11 +145,12 @@ async def test_failed_write_pauses_the_polls(hass, setup_demo):
     """A command rejected with HTTP 429 also pauses the polls."""
     coordinator = setup_demo.runtime_data
     setup_demo.write.side_effect = MyGekkoTooManyRequests("429")
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
-            "light", "turn_off", {"entity_id": "light.kitchen"}, blocking=True
-        )
+    await hass.services.async_call(
+        "light", "turn_off", {"entity_id": "light.kitchen"}, blocking=True
+    )
     assert coordinator.is_backing_off
+    assert coordinator._queued
+    coordinator.async_cancel_queued()
     assert hass.states.get("light.kitchen").state == "on"
 
 
@@ -229,3 +228,14 @@ async def test_rejected_requests_ask_for_login_after_a_few_times(hass):
     await hass.async_block_till_done()
     flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
     assert [flow["context"]["source"] for flow in flows] == ["reauth"]
+
+
+async def test_retried_setup_waits_for_the_pause(hass):
+    """A rate limit at the first start: the retried setup sends no request until the pause ends."""
+    entry = MockConfigEntry(domain=DOMAIN, version=3, data=DEMO_CONFIG, unique_id="p")
+    entry.add_to_hass(hass)
+    with patch(READ_DATA, side_effect=MyGekkoTooManyRequests("429")) as read_data:
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.config_entries.async_unload(entry.entry_id)
+        await hass.config_entries.async_setup(entry.entry_id)
+    assert read_data.call_count == 1

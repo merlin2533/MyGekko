@@ -44,6 +44,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGekkoConfigEntry):
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
+    entry.async_on_unload(coordinator.async_cancel_queued)
     _register_controller(hass, entry, coordinator)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -158,6 +159,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: MyGekkoConfigEntry) -> 
     ir.async_delete_issue(hass, DOMAIN, f"rate_limited_{entry.entry_id}")
     ir.async_delete_issue(hass, DOMAIN, f"duplicate_entry_{entry.entry_id}")
     _update_duplicate_issues(hass, removed_entry_id=entry.entry_id)
+    hass.data.get(DOMAIN, {}).get("rate_limit_pauses", {}).pop(entry.entry_id, None)
     # the last state saved by the coordinator
     await Store(hass, 1, f"{DOMAIN}.{entry.entry_id}").async_remove()
 
