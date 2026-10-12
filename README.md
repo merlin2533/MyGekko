@@ -1,5 +1,7 @@
 # MyGekko
 
+> **Fork:** This is the maintained fork [merlin2533/MyGekko](https://github.com/merlin2533/MyGekko) of the original integration [StephanU/MyGekko](https://github.com/StephanU/MyGekko) by Stephan Uhle ([original README](https://github.com/StephanU/MyGekko#readme)). Please report issues for this version [here](https://github.com/merlin2533/MyGekko/issues).
+
 MyGekko integration for Home Assistant. It talks to the MyGekko REST API directly with its own, dependency-free API layer (`custom_components/mygekko/api`), which is derived from [PyMyGekko](https://github.com/StephanU/PyMyGekko) (see [Credits](#credits)).
 
 [![GitHub Release][releases-shield]][releases]

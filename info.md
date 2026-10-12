@@ -1,3 +1,7 @@
+# MyGekko
+
+> **Fork:** This is the maintained fork [merlin2533/MyGekko](https://github.com/merlin2533/MyGekko) of the original integration [StephanU/MyGekko](https://github.com/StephanU/MyGekko) by Stephan Uhle ([original README](https://github.com/StephanU/MyGekko#readme)). Please report issues for this version [here](https://github.com/merlin2533/MyGekko/issues).
+
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]][license]
