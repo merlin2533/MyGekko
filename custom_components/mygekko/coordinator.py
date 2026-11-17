@@ -50,6 +50,8 @@ RATE_LIMIT_PAUSE = timedelta(minutes=4)
 RATE_LIMIT_ISSUE_AFTER = timedelta(minutes=30)
 # other errors (timeout, network, server) keep the last values for this time
 ERROR_GRACE = timedelta(minutes=15)
+# ... and for at least this many failed polls in a row
+MAX_ERROR_FAILURES = 5
 UPDATE_TIMEOUT = 40
 REFRESH_COOLDOWN = 2.0
 WRITE_TIMEOUT = 15
@@ -58,7 +60,7 @@ WRITE_MIN_DELAY = 0.3
 COMMAND_BURST = 10
 COMMAND_WINDOW = 10.0
 # rejected requests (HTTP 401/403) before the user has to log in again
-MAX_AUTH_FAILURES = 3
+MAX_AUTH_FAILURES = 5
 # a command delayed by the rate limit is tried after this many pauses at most
 MAX_QUEUED_ATTEMPTS = 3
 # the last state is saved at most this often (and when Home Assistant stops)
@@ -161,6 +163,7 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
         self._backoff_until = self._pauses.get(entry.entry_id, 0.0)
         self._has_data = False
         self._auth_failures = 0
+        self._error_failures = 0
         self._rate_limited_since: datetime | None = None
         self._failing_since: datetime | None = None
         self.rate_limited_until: datetime | None = None
@@ -319,11 +322,19 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
         except MyGekkoForbidden as exception:
             # a running integration tolerates a few rejections before asking the user
             self._auth_failures += 1
-            if not self._has_data or self._auth_failures >= MAX_AUTH_FAILURES:
+            self._restore_cache()
+            if self._auth_failures >= MAX_AUTH_FAILURES:
                 raise ConfigEntryAuthFailed(
                     "MyGekko rejected the credentials or access"
                 ) from exception
             self.api_state = API_STATE_ERROR
+            if not self._has_data:
+                # nothing to keep yet: setup is retried, no login prompt before
+                # MAX_AUTH_FAILURES rejections in a row
+                raise UpdateFailed(
+                    f"MyGekko rejected the request "
+                    f"({self._auth_failures}/{MAX_AUTH_FAILURES})"
+                ) from exception
             _LOGGER.warning(
                 "MyGekko rejected the request (%s/%s), keeping the last state",
                 self._auth_failures,
@@ -340,6 +351,7 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
             self._restore_cache()
             self.api_state = API_STATE_ERROR
             self._failing_since = self._failing_since or dt_util.utcnow()
+            self._error_failures += 1
             if self._within_grace():
                 _LOGGER.warning("%s, keeping the last state", message)
                 return self.data
@@ -350,6 +362,7 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
         self._has_data = True
         self._cached = None
         self._auth_failures = 0
+        self._error_failures = 0
         self._backoff_until = 0.0
         self._rate_limited_since = None
         self._failing_since = None
@@ -366,7 +379,10 @@ class MyGekkoDataUpdateCoordinator(DataUpdateCoordinator):
         """Return whether the errors started recently enough to keep the last state."""
         if not self._has_data or self._failing_since is None:
             return False
-        return dt_util.utcnow() - self._failing_since < ERROR_GRACE
+        return (
+            dt_util.utcnow() - self._failing_since < ERROR_GRACE
+            or self._error_failures < MAX_ERROR_FAILURES
+        )
 
     # --- commands ----------------------------------------------------------------
 

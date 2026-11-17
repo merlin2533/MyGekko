@@ -256,7 +256,7 @@ class MyGekkoHttpClient(MyGekkoClient):
         ) as response:
             body = await response.text()
             if response.status != 200:
-                _LOGGER.error("MyGekko answered %s for %s", response.status, path)
+                _LOGGER.debug("MyGekko answered %s for %s", response.status, path)
                 raise error_for_status(response.status, body)
             return body
 
